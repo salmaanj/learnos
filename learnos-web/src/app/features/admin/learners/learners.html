@@ -1,0 +1,399 @@
+<div class="page">
+  <div class="toolbar">
+    <input
+      type="text"
+      class="search-input"
+      placeholder="Search learners by name, email or phone..."
+      [(ngModel)]="searchTerm"
+      (ngModelChange)="onSearchChange()"
+    />
+
+    <a
+      class="btn btn-primary"
+      routerLink="/admin/companies/users/new"
+      [queryParams]="{ role: 'LEARNER' }"
+    >
+      + Add Learner
+    </a>
+
+    <button
+      class="btn btn-outline"
+      (click)="exportCsv()"
+      [disabled]="loading || filteredLearners.length === 0"
+    >
+      Export CSV
+    </button>
+  </div>
+
+  <div class="card table-card">
+    <div *ngIf="loading" class="state-message">
+      Loading learners…
+    </div>
+
+    <div *ngIf="!loading && errorMessage" class="state-message error">
+      {{ errorMessage }}
+    </div>
+
+    <div
+      *ngIf="!loading && !errorMessage && filteredLearners.length === 0"
+      class="state-message"
+    >
+      {{
+        learners.length > 0
+          ? 'No learners match your search.'
+          : 'No learners found yet. Learners will appear here once they register using a company code, or once you add one manually.'
+      }}
+    </div>
+
+    <table
+      class="tbl"
+      *ngIf="!loading && !errorMessage && filteredLearners.length > 0"
+    >
+      <thead>
+        <tr>
+          <th class="number-column">#</th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('name')"
+          >
+            Learner
+            <span class="sort-icon">{{ sortIndicator('name') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('companyName')"
+          >
+            Company
+            <span class="sort-icon">{{ sortIndicator('companyName') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('coursesEnrolled')"
+          >
+            Courses
+            <span class="sort-icon">
+              {{ sortIndicator('coursesEnrolled') }}
+            </span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('avgProgressPercent')"
+          >
+            Progress
+            <span class="sort-icon">
+              {{ sortIndicator('avgProgressPercent') }}
+            </span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('lastActive')"
+          >
+            Last active
+            <span class="sort-icon">{{ sortIndicator('lastActive') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('status')"
+          >
+            Status
+            <span class="sort-icon">{{ sortIndicator('status') }}</span>
+          </th>
+
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <ng-container
+          *ngFor="
+            let learner of filteredLearners;
+            let index = index;
+            trackBy: trackByLearnerId
+          "
+        >
+          <tr
+            class="clickable-row"
+            [class.selected-row]="selectedLearner?.id === learner.id"
+            (click)="selectLearner(learner)"
+          >
+            <td class="number-column">
+              {{ index + 1 }}
+            </td>
+
+            <td>
+              <div class="learner-cell">
+                <div class="avatar" [ngClass]="learner.avatarClass">
+                  {{ learner.initials }}
+                </div>
+
+                <div>
+                  <b>{{ learner.name }}</b>
+
+                  <span class="email">
+                    {{ learner.email }}
+                  </span>
+
+                  <span
+                    *ngIf="learner.phone"
+                    class="phone"
+                  >
+                    {{ learner.phone }}
+                  </span>
+                </div>
+              </div>
+            </td>
+
+            <td>{{ learner.companyName || '—' }}</td>
+
+            <td>
+              <button
+                class="course-count-button"
+                type="button"
+                (click)="selectLearner(learner, $event)"
+                [title]="'View ' + learner.name + '\'s enrolled courses'"
+              >
+                {{ learner.coursesEnrolled }}
+              </button>
+            </td>
+
+            <td>
+              <div class="progress-cell">
+                <div class="prog progress-bar">
+                  <div
+                    class="prog-fill"
+                    [style.width.%]="learner.avgProgressPercent"
+                    [style.background]="getProgressColor(learner.status)"
+                  ></div>
+                </div>
+
+                <span>{{ learner.avgProgressPercent }}%</span>
+              </div>
+            </td>
+
+            <td class="last-active">
+              {{ learner.lastActiveLabel }}
+            </td>
+
+            <td>
+              <span
+                class="badge"
+                [ngClass]="getStatusClass(learner.status)"
+              >
+                {{ learner.status }}
+              </span>
+            </td>
+
+            <td
+              class="actions-cell"
+              (click)="$event.stopPropagation()"
+            >
+              <a
+                class="edit-learner-link"
+                [routerLink]="['/admin/companies/users', learner.id, 'edit']"
+                [queryParams]="{ role: 'LEARNER' }"
+              >
+                Edit
+              </a>
+
+              <button
+                class="btn-delete"
+                (click)="deleteLearner(learner, $event)"
+              >
+                Delete
+              </button>
+            </td>
+          </tr>
+
+          <tr
+            *ngIf="selectedLearner?.id === learner.id"
+            class="learner-details-row"
+          >
+            <td colspan="8">
+              <section
+                *ngIf="selectedLearner as learnerDetails"
+                class="learner-details-panel"
+              >
+                <div class="detail-header">
+                  <div>
+                    <p class="detail-kicker">Learner profile</p>
+
+                    <h2>{{ learnerDetails.name }}</h2>
+
+                    <p class="detail-subtitle">
+                      {{ learnerDetails.email }} ·
+                      {{ learnerDetails.companyName || 'Company' }}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="close-details"
+                    title="Close learner details"
+                    (click)="closeLearnerDetails()"
+                  >
+                    ×
+                  </button>
+                </div>
+
+                <div class="learner-summary">
+                  <div>
+                    <span>Enrolled courses</span>
+                    <strong>{{ learnerEnrollments.length }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Average progress</span>
+                    <strong>
+                      {{ learnerDetails.avgProgressPercent }}%
+                    </strong>
+                  </div>
+
+                  <div>
+                    <span>Last active</span>
+                    <strong>{{ learnerDetails.lastActiveLabel }}</strong>
+                  </div>
+
+                  <div>
+                    <span>Status</span>
+                    <strong>{{ learnerDetails.status }}</strong>
+                  </div>
+                </div>
+
+                <div *ngIf="enrollmentError" class="enrollment-error">
+                  {{ enrollmentError }}
+                </div>
+
+                <div *ngIf="loadingEnrollments" class="enrollment-state">
+                  Loading enrolled courses...
+                </div>
+
+                <div
+                  *ngIf="
+                    !loadingEnrollments &&
+                    !enrollmentError &&
+                    learnerEnrollments.length === 0
+                  "
+                  class="enrollment-state"
+                >
+                  This learner is not enrolled in any courses yet.
+                  Use <strong>All Courses → Manage Enrollments</strong> to
+                  enroll them in a course.
+                </div>
+
+                <div
+                  *ngIf="
+                    !loadingEnrollments &&
+                    !enrollmentError &&
+                    learnerEnrollments.length > 0
+                  "
+                  class="enrollment-table-wrap"
+                >
+                  <table class="enrollment-table">
+                    <thead>
+                      <tr>
+                        <th>Course</th>
+                        <th>Category</th>
+                        <th>Progress</th>
+                        <th>Enrolled</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      <tr
+                        *ngFor="
+                          let enrollment of learnerEnrollments;
+                          trackBy: trackByEnrollmentId
+                        "
+                      >
+                        <td>
+                          <strong>{{ enrollment.courseTitle }}</strong>
+                        </td>
+
+                        <td>
+                          {{ enrollment.courseCategory || '—' }}
+                        </td>
+
+                        <td>
+                          <div class="enrollment-progress">
+                            <div class="prog enrollment-progress-bar">
+                              <div
+                                class="prog-fill"
+                                [style.width.%]="enrollment.progressPercent"
+                                [style.background]="
+                                  enrollment.progressPercent >= 100
+                                    ? 'var(--gr)'
+                                    : 'var(--pu)'
+                                "
+                              ></div>
+                            </div>
+
+                            <span>
+                              {{ enrollment.progressPercent }}%
+                            </span>
+                          </div>
+                        </td>
+
+                        <td>
+                          {{ formatEnrollmentDate(enrollment.enrolledAt) }}
+                        </td>
+
+                        <td>
+                          <span
+                            class="enrollment-status"
+                            [ngClass]="
+                              enrollmentStatusClass(enrollment.status)
+                            "
+                          >
+                            {{ enrollmentStatusLabel(enrollment.status) }}
+                          </span>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="detail-actions">
+          <div class="detail-action-buttons">
+            <a
+              class="btn btn-primary"
+              [routerLink]="[
+                '/admin/learners',
+                learnerDetails.userId,
+                'enrollments'
+              ]"
+            >
+              + Enroll in course
+            </a>
+
+            <a
+              class="btn btn-outline"
+              [routerLink]="[
+                '/admin/companies/users',
+                learnerDetails.id,
+                'edit'
+              ]"
+              [queryParams]="{ role: 'LEARNER' }"
+            >
+              Edit learner
+            </a>
+          </div>
+
+  <span>
+    Use this page to manage courses for this learner.
+  </span>
+</div>
+              </section>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+  </div>
+</div>

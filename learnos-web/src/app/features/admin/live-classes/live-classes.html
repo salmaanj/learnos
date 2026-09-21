@@ -1,0 +1,247 @@
+<div class="live-classes-page">
+  <section class="live-toolbar card">
+    <div class="toolbar-heading">
+      <div>
+        <h2>Live classes</h2>
+
+        <p>
+          Schedule instructor-led sessions, share meeting links,
+          and manage upcoming learning events.
+        </p>
+      </div>
+
+      <a
+        class="btn btn-primary"
+        routerLink="/admin/live-classes/new"
+        >
+        + New Live Class
+      </a>
+    </div>
+
+    <div class="toolbar-filters">
+      <input
+        #liveClassSearch
+        type="search"
+        class="live-search"
+        placeholder="Search live classes..."
+        [value]="searchTerm"
+        (input)="
+          searchTerm = liveClassSearch.value;
+          onSearchChange()
+        "
+      />
+
+      <select
+        class="live-select"
+        [(ngModel)]="selectedStatus"
+        (ngModelChange)="onFilterChange()"
+      >
+        <option value="">All statuses</option>
+
+        <option
+          *ngFor="let status of statuses"
+          [value]="status.value"
+        >
+          {{ status.label }}
+        </option>
+      </select>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="clearFilters()"
+      >
+        Clear
+      </button>
+    </div>
+  </section>
+
+  <div *ngIf="loading" class="live-state card">
+    Loading live classes...
+  </div>
+
+  <div *ngIf="!loading && error" class="live-error card">
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+    <section
+      *ngIf="items.length > 0"
+      class="live-class-list"
+    >
+      <article
+        *ngFor="let item of items; trackBy: trackById"
+        class="live-class-card card"
+      >
+        <div class="date-card">
+          <span class="date-day">
+            {{ formatDay(item.startAt) }}
+          </span>
+
+          <span class="date-month">
+            {{ formatMonth(item.startAt) }}
+          </span>
+        </div>
+
+        <div class="live-class-main">
+          <div class="live-class-heading">
+            <div class="title-block">
+              <div class="title-row">
+                <h3>{{ item.title }}</h3>
+
+                <span
+                  class="status-badge"
+                  [class.draft]="item.status === 'DRAFT'"
+                  [class.scheduled]="item.status === 'SCHEDULED'"
+                  [class.live]="item.status === 'LIVE'"
+                  [class.completed]="item.status === 'COMPLETED'"
+                  [class.cancelled]="item.status === 'CANCELLED'"
+                >
+                  {{ statusLabel(item.status) }}
+                </span>
+              </div>
+
+              <p *ngIf="item.description">
+                {{ item.description }}
+              </p>
+            </div>
+          </div>
+
+          <div class="live-class-meta">
+            <span>
+              {{ formatDate(item.startAt) }}
+            </span>
+
+            <span>
+              {{ formatTime(item.startAt) }}
+              –
+              {{ formatTime(item.endAt) }}
+            </span>
+
+            <span *ngIf="formatDuration(item.startAt, item.endAt)">
+              {{ formatDuration(item.startAt, item.endAt) }}
+            </span>
+
+            <span>
+              {{ providerLabel(item.provider) }}
+            </span>
+
+            <span *ngIf="item.capacity !== null">
+              {{ item.capacity }} seats
+            </span>
+          </div>
+
+          <div class="live-class-context">
+            <span *ngIf="item.courseTitle">
+              Course: {{ item.courseTitle }}
+            </span>
+
+            <span *ngIf="item.instructorName">
+              Trainer: {{ item.instructorName }}
+            </span>
+
+            <span *ngIf="!item.courseTitle">
+              Standalone live class
+            </span>
+          </div>
+        </div>
+
+        <div class="live-class-actions">
+          <a
+            class="btn btn-outline"
+            [routerLink]="[
+                '/admin/live-classes',
+                item.id,
+                'edit'
+            ]"
+            >
+            View / Edit
+         </a>
+        </div>
+      </article>
+    </section>
+
+    <section
+      *ngIf="items.length === 0"
+      class="empty-live-classes card"
+    >
+      <div class="empty-icon">◉</div>
+
+      <h2>No live classes found</h2>
+
+      <p
+        *ngIf="
+          searchTerm ||
+          selectedStatus
+        "
+      >
+        Try changing your search text or status filter.
+      </p>
+
+      <p
+        *ngIf="
+          !searchTerm &&
+          !selectedStatus
+        "
+      >
+        Schedule your first instructor-led session for a course
+        or create a standalone event.
+      </p>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="clearFilters()"
+        *ngIf="searchTerm || selectedStatus"
+      >
+        Clear filters
+      </button>
+    </section>
+
+    <div
+      *ngIf="totalElements > 0"
+      class="pagination-row"
+    >
+      <span>
+        Showing
+        {{ page * pageSize + 1 }}
+        –
+        {{
+          Math.min(
+            (page + 1) * pageSize,
+            totalElements
+          )
+        }}
+        of {{ totalElements }}
+      </span>
+
+      <div class="pagination-actions">
+        <button
+          type="button"
+          class="btn btn-outline"
+          [disabled]="page === 0 || loading"
+          (click)="previousPage()"
+        >
+          ← Previous
+        </button>
+
+        <span>
+          Page {{ page + 1 }} of {{ totalPages || 1 }}
+        </span>
+
+        <button
+          type="button"
+          class="btn btn-outline"
+          [disabled]="
+            loading ||
+            totalPages === 0 ||
+            page >= totalPages - 1
+          "
+          (click)="nextPage()"
+        >
+          Next →
+        </button>
+      </div>
+    </div>
+  </ng-container>
+</div>

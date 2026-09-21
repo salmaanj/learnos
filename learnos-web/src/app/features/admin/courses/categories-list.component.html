@@ -1,0 +1,113 @@
+<div class="table-shell">
+  <div class="table-toolbar">
+    <div class="table-count">
+      Categories
+      <span>({{ displayedCategories.length }})</span>
+    </div>
+
+    <input
+      #categorySearch
+      type="search"
+      class="table-search"
+      placeholder="Search categories..."
+      [value]="searchTerm"
+      (input)="onSearchChange(); searchTerm = categorySearch.value"
+    />
+  </div>
+
+  <div class="card table-card">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width: 48px; text-align: center;">#</th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('name')"
+          >
+            Name
+            <span class="sort-icon">{{ sortIndicator('name') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('courses')"
+          >
+            Courses
+            <span class="sort-icon">{{ sortIndicator('courses') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('status')"
+          >
+            Status
+            <span class="sort-icon">{{ sortIndicator('status') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('updatedAt')"
+          >
+            Updated
+            <span class="sort-icon">{{ sortIndicator('updatedAt') }}</span>
+          </th>
+
+          <th>Actions</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr *ngIf="loading">
+          <td colspan="6" class="empty-row">Loading categories...</td>
+        </tr>
+
+        <tr *ngIf="error && !loading">
+          <td colspan="6" class="empty-row">{{ error }}</td>
+        </tr>
+
+        <tr
+          *ngFor="let c of displayedCategories; let index = index"
+          class="clickable-row"
+          (click)="editCategory(c.id)"
+        >
+          <td style="text-align: center; color: #64748b;">
+            {{ index + 1 }}
+          </td>
+
+          <td class="title-cell">{{ c.name }}</td>
+          <td>{{ c.courses }}</td>
+
+          <td>
+            <span
+              class="status-pill"
+              [class.active]="c.status === 'Active'"
+              [class.inactive]="c.status === 'Inactive'"
+            >
+              {{ c.status }}
+            </span>
+          </td>
+
+          <td>{{ c.updatedAt }}</td>
+
+          <td>
+            <button
+              class="btn-delete"
+              (click)="deleteCategory(c.id, c.name, $event)"
+            >
+              Delete
+            </button>
+          </td>
+        </tr>
+
+        <tr *ngIf="!loading && !error && categories.length === 0">
+          <td colspan="6" class="empty-row">No categories found.</td>
+        </tr>
+
+        <tr *ngIf="!loading && !error && categories.length > 0 && displayedCategories.length === 0">
+          <td colspan="6" class="empty-row">No categories match your search.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

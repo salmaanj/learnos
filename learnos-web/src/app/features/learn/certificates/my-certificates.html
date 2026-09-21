@@ -1,0 +1,152 @@
+<section class="certificates-page">
+  <div class="page-heading">
+    <div>
+      <p class="eyebrow">Achievements</p>
+      <h1>My Certificates</h1>
+      <p class="page-subtitle">
+        Your certificates are issued after you complete a course and pass its assessment.
+      </p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="state-card">
+    Loading your certificates...
+  </div>
+
+  <div *ngIf="!loading && error" class="state-card error-card">
+    <p>{{ error }}</p>
+
+    <button
+      class="btn btn-outline"
+      type="button"
+      (click)="loadCertificates()"
+    >
+      Try again
+    </button>
+  </div>
+
+  <div
+    *ngIf="!loading && !error && certificates.length === 0"
+    class="state-card empty-card"
+  >
+    <div class="empty-icon">★</div>
+
+    <h2>No certificates yet</h2>
+
+    <p>
+      Complete all lessons in a course and pass its assessment to earn your first certificate.
+    </p>
+  </div>
+
+  <div
+    *ngIf="!loading && !error && certificates.length > 0"
+    class="certificate-grid"
+  >
+    <article
+      *ngFor="let certificate of certificates"
+      class="certificate-card"
+      [class.revoked]="certificate.status !== 'ISSUED'"
+    >
+      <div class="certificate-ribbon">
+        <span>LearnOS</span>
+
+        <span
+          class="status-pill"
+          [ngClass]="statusClass(certificate.status)"
+        >
+          {{ statusLabel(certificate.status) }}
+        </span>
+      </div>
+
+      <div class="certificate-body">
+        <p class="certificate-label">Certificate of Completion</p>
+
+        <h2 [title]="certificate.courseTitle">
+          {{ certificate.courseTitle }}
+        </h2>
+
+        <p class="recipient-line">
+          Awarded to <strong>{{ certificate.learnerName }}</strong>
+        </p>
+
+        <p
+          class="company-line"
+          *ngIf="certificate.companyName"
+        >
+          {{ certificate.companyName }}
+        </p>
+
+        <div class="certificate-meta">
+          <div>
+            <span>Issued</span>
+            <strong>{{ formatDate(certificate.issuedAt) }}</strong>
+          </div>
+
+          <div *ngIf="certificate.quizScorePercent !== null">
+            <span>Assessment score</span>
+            <strong>{{ certificate.quizScorePercent }}%</strong>
+          </div>
+        </div>
+
+        <div class="certificate-number">
+          <span>Certificate number</span>
+          <strong>{{ certificate.certificateNumber }}</strong>
+        </div>
+
+        <div class="verification-box">
+          <div>
+            <span>Verification code</span>
+            <strong>
+              {{ certificate.verificationCode || 'Not available' }}
+            </strong>
+          </div>
+
+          <button
+            *ngIf="certificate.verificationCode"
+            class="btn btn-copy"
+            type="button"
+            (click)="copyVerificationCode(certificate.verificationCode)"
+          >
+            Copy
+          </button>
+        </div>
+
+        <p
+          *ngIf="certificate.status !== 'ISSUED' && certificate.revocationReason"
+          class="revocation-note"
+        >
+          {{ certificate.revocationReason }}
+        </p>
+
+        <button
+          *ngIf="certificate.status === 'ISSUED'"
+          class="btn btn-download"
+          type="button"
+          [disabled]="isDownloading(certificate.id)"
+          (click)="downloadPdf(certificate)"
+        >
+          <span>
+            {{
+              isDownloading(certificate.id)
+                ? 'Preparing PDF...'
+                : 'Download PDF'
+            }}
+          </span>
+
+          <span *ngIf="!isDownloading(certificate.id)">
+            ↓
+          </span>
+        </button>
+
+        <button
+          *ngIf="certificate.status !== 'ISSUED'"
+          class="btn btn-download disabled-download"
+          type="button"
+          disabled
+        >
+          Download unavailable
+        </button>
+      </div>
+    </article>
+  </div>
+</section>

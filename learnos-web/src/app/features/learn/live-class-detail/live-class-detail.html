@@ -1,0 +1,221 @@
+<div class="live-class-detail-page">
+  <a
+    class="back-link"
+    routerLink="/learn/live-classes"
+  >
+    ← Back to Live classes
+  </a>
+
+  <div
+    *ngIf="loading"
+    class="state-message card"
+  >
+    Loading live class...
+  </div>
+
+  <div
+    *ngIf="!loading && error"
+    class="error-message card"
+  >
+    {{ error }}
+
+    <button
+      type="button"
+      class="btn btn-outline"
+      (click)="goBack()"
+    >
+      Back to Live classes
+    </button>
+  </div>
+
+  <ng-container *ngIf="!loading && !error && liveClass">
+    <section class="hero-card card">
+      <div class="hero-content">
+        <span class="eyebrow">
+          {{ liveClass.status }}
+        </span>
+
+        <h1>{{ liveClass.title }}</h1>
+
+        <p
+          *ngIf="liveClass.description"
+          class="hero-description"
+        >
+          {{ liveClass.description }}
+        </p>
+
+        <div class="hero-meta">
+          <span>
+            {{ formatDate(liveClass.startAt) }}
+          </span>
+
+          <span>
+            {{ formatTime(liveClass.startAt) }}
+            –
+            {{ formatTime(liveClass.endAt) }}
+          </span>
+
+          <span>
+            {{ liveClass.timezone }}
+          </span>
+        </div>
+      </div>
+
+      <div class="hero-action">
+        <button
+          *ngIf="liveClass.joinAvailable"
+          type="button"
+          class="btn btn-primary join-button"
+          [disabled]="joining"
+          (click)="joinClass()"
+        >
+          {{
+            joining
+              ? 'Opening…'
+              : 'Join class'
+          }}
+        </button>
+
+        <span
+          *ngIf="
+            !liveClass.joinAvailable &&
+            liveClass.status === 'SCHEDULED'
+          "
+          class="join-hint"
+        >
+          Joining opens 15 minutes before the start time.
+        </span>
+
+        <span
+          *ngIf="liveClass.status === 'COMPLETED'"
+          class="completed-hint"
+        >
+          This class has ended.
+        </span>
+      </div>
+    </section>
+
+    <div
+      *ngIf="actionError"
+      class="action-error"
+    >
+      {{ actionError }}
+    </div>
+
+    <div class="detail-grid">
+      <section class="detail-card card">
+        <h2>Class details</h2>
+
+        <div class="detail-row">
+          <span>Provider</span>
+          <strong>
+            {{ providerLabel(liveClass.provider) }}
+          </strong>
+        </div>
+
+        <div
+          *ngIf="liveClass.courseTitle"
+          class="detail-row"
+        >
+          <span>Course</span>
+          <strong>
+            {{ liveClass.courseTitle }}
+          </strong>
+        </div>
+
+        <div
+          *ngIf="liveClass.instructorName"
+          class="detail-row"
+        >
+          <span>Trainer</span>
+          <strong>
+            {{ liveClass.instructorName }}
+          </strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Duration</span>
+          <strong>
+            {{ formatDuration(
+              liveClass.startAt,
+              liveClass.endAt
+            ) }}
+          </strong>
+        </div>
+      </section>
+
+      <section class="detail-card card">
+        <h2>Attendance</h2>
+
+        <div
+          *ngIf="liveClass.attendanceStatus"
+          class="attendance-status"
+        >
+          <span>Status</span>
+          <strong>
+            {{ liveClass.attendanceStatus }}
+          </strong>
+        </div>
+
+        <div
+          *ngIf="
+            liveClass.minutesAttended !== null &&
+            liveClass.minutesAttended > 0
+          "
+          class="detail-row"
+        >
+          <span>Minutes attended</span>
+          <strong>
+            {{ liveClass.minutesAttended }}
+          </strong>
+        </div>
+
+        <button
+          *ngIf="
+            liveClass.attendanceStatus === 'ATTENDED' &&
+            !liveClass.leaveAt
+          "
+          type="button"
+          class="btn btn-outline"
+          [disabled]="leaving"
+          (click)="leaveClass()"
+        >
+          {{
+            leaving
+              ? 'Saving…'
+              : 'Mark attendance end'
+          }}
+        </button>
+
+        <p
+          *ngIf="!liveClass.attendanceStatus"
+          class="muted"
+        >
+          Your attendance will be recorded when you join the class.
+        </p>
+      </section>
+    </div>
+
+    <section
+      *ngIf="liveClass.recordingUrl"
+      class="recording-card card"
+    >
+      <div>
+        <h2>Class recording</h2>
+
+        <p>
+          Revisit this session using the available recording.
+        </p>
+      </div>
+
+      <a
+        class="btn btn-primary"
+        [href]="liveClass.recordingUrl"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Watch recording
+      </a>
+    </section>
+  </ng-container>
+</div>

@@ -1,0 +1,305 @@
+<div class="plans-page">
+  <div class="plans-header">
+    <div>
+      <p class="page-kicker">Subscription management</p>
+      <h1>Plans</h1>
+      <p class="subtitle">
+        Manage subscription plans available to companies.
+      </p>
+    </div>
+
+    <button
+      class="btn btn-primary"
+      type="button"
+      (click)="openCreateForm()"
+    >
+      + New Plan
+    </button>
+  </div>
+
+  <div class="alert-error" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="card plans-card">
+    <div class="plans-toolbar">
+      <div class="plans-title">
+        All Plans
+        <span>({{ displayedPlans.length }})</span>
+      </div>
+
+      <input
+        #planSearch
+        type="search"
+        placeholder="Search plans..."
+        [value]="searchTerm"
+        (input)="searchTerm = planSearch.value; onSearchChange()"
+        class="plan-search"
+      />
+    </div>
+
+    <div *ngIf="loading" class="table-state">
+      Loading plans…
+    </div>
+
+    <ng-container *ngIf="!loading">
+      <div class="table-wrap" *ngIf="displayedPlans.length > 0">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="number-column">#</th>
+              <th>Code</th>
+              <th>Name</th>
+              <th>Price</th>
+              <th>Duration</th>
+              <th>Max learners</th>
+              <th>Max courses</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              *ngFor="
+                let plan of displayedPlans;
+                let planIndex = index;
+                trackBy: trackByPlanId
+              "
+              class="plan-row"
+            >
+              <td class="number-column">{{ planIndex + 1 }}</td>
+              <td class="plan-code">{{ plan.code }}</td>
+              <td class="plan-name">{{ plan.name }}</td>
+              <td class="plan-price">
+                {{ plan.currency }} {{ plan.price ?? '-' }}
+              </td>
+              <td>
+                {{
+                  plan.durationMonths
+                    ? plan.durationMonths + ' Months'
+                    : '-'
+                }}
+              </td>
+              <td>{{ plan.maxLearners ?? '-' }}</td>
+              <td>{{ plan.maxCourses ?? '-' }}</td>
+              <td>
+                <span
+                  class="status-badge"
+                  [class.status-active]="plan.active"
+                  [class.status-inactive]="!plan.active"
+                >
+                  {{ plan.active ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td class="actions">
+                <button
+                  class="btn-pill btn-pill-edit"
+                  type="button"
+                  (click)="openEditForm(plan)"
+                >
+                  Edit
+                </button>
+
+                <button
+                  class="btn-pill btn-pill-toggle"
+                  type="button"
+                  (click)="toggleStatus(plan)"
+                >
+                  {{ plan.active ? 'Deactivate' : 'Activate' }}
+                </button>
+
+                <button
+                  class="btn-pill btn-pill-delete"
+                  type="button"
+                  (click)="deletePlan(plan)"
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div
+        *ngIf="plans.length > 0 && displayedPlans.length === 0"
+        class="table-empty"
+      >
+        No plans match your search.
+      </div>
+
+      <div
+        *ngIf="plans.length === 0"
+        class="table-empty"
+      >
+        No plans yet. Create your first plan to get started.
+      </div>
+    </ng-container>
+  </div>
+</div>
+
+<div
+  class="modal-backdrop"
+  *ngIf="showForm"
+  (click)="cancelForm()"
+>
+  <div
+    class="modal-card"
+    (click)="$event.stopPropagation()"
+  >
+    <div class="modal-header">
+      <h2>{{ isEditMode ? 'Edit Plan' : 'New Plan' }}</h2>
+
+      <button
+        class="modal-close"
+        type="button"
+        aria-label="Close"
+        (click)="cancelForm()"
+        [disabled]="saving"
+      >
+        ×
+      </button>
+    </div>
+
+    <form
+      [formGroup]="planForm"
+      (ngSubmit)="submitForm()"
+    >
+      <div class="form-row">
+        <label for="code">Plan Code</label>
+        <input
+          id="code"
+          class="form-input"
+          type="text"
+          formControlName="code"
+          placeholder="e.g. BASIC"
+        />
+      </div>
+
+      <div class="form-row">
+        <label for="name">Plan Name</label>
+        <input
+          id="name"
+          class="form-input"
+          type="text"
+          formControlName="name"
+          placeholder="e.g. Basic Plan"
+        />
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label for="price">Price</label>
+          <input
+            id="price"
+            class="form-input"
+            type="number"
+            formControlName="price"
+            min="0"
+          />
+        </div>
+
+        <div>
+          <label for="currency">Currency</label>
+          <input
+            id="currency"
+            class="form-input"
+            type="text"
+            formControlName="currency"
+            maxlength="3"
+          />
+        </div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label for="durationMonths">Duration (months)</label>
+          <input
+            id="durationMonths"
+            class="form-input"
+            type="number"
+            formControlName="durationMonths"
+            min="1"
+          />
+        </div>
+
+        <div>
+          <label for="displayOrder">Display Order</label>
+          <input
+            id="displayOrder"
+            class="form-input"
+            type="number"
+            formControlName="displayOrder"
+            min="0"
+          />
+        </div>
+      </div>
+
+      <div class="form-row form-row-split">
+        <div>
+          <label for="maxLearners">Max Learners</label>
+          <input
+            id="maxLearners"
+            class="form-input"
+            type="number"
+            formControlName="maxLearners"
+            min="0"
+          />
+        </div>
+
+        <div>
+          <label for="maxCourses">Max Courses</label>
+          <input
+            id="maxCourses"
+            class="form-input"
+            type="number"
+            formControlName="maxCourses"
+            min="0"
+          />
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label for="description">Description</label>
+        <textarea
+          id="description"
+          class="form-input description-input"
+          formControlName="description"
+          rows="3"
+        ></textarea>
+      </div>
+
+      <div class="active-row">
+        <label class="active-label" for="active">
+          <input
+            id="active"
+            class="active-checkbox"
+            type="checkbox"
+            formControlName="active"
+          />
+          <span>Active</span>
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button
+          class="btn btn-secondary"
+          type="button"
+          (click)="cancelForm()"
+          [disabled]="saving"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="submit"
+          [disabled]="saving || planForm.invalid"
+        >
+          {{ saving ? 'Saving…' : 'Save Plan' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

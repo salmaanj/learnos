@@ -1,0 +1,440 @@
+<div class="page">
+  <div class="nav-tabs">
+    <div
+      class="nav-tab"
+      [class.active]="activeTab === 'builder'"
+      (click)="setTab('builder')"
+    >
+      Quiz builder
+    </div>
+
+    <div
+      class="nav-tab"
+      [class.active]="activeTab === 'results'"
+      (click)="setTab('results')"
+    >
+      Results
+    </div>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-banner">
+    {{ errorMessage }}
+  </div>
+
+  <div class="quiz-picker-toolbar">
+    <input
+      type="search"
+      class="quiz-search"
+      placeholder="Search quizzes..."
+      [(ngModel)]="searchTerm"
+    />
+
+    <button class="btn btn-outline" (click)="toggleNewQuizForm()">
+      + New quiz
+    </button>
+  </div>
+
+  <div class="quiz-picker">
+    <div
+      *ngFor="let quiz of displayedQuizzes; let quizIndex = index"
+      class="quiz-chip"
+      [class.active]="selectedQuiz?.id === quiz.id"
+      (click)="selectQuiz(quiz)"
+    >
+      <span class="quiz-number">{{ quizIndex + 1 }}</span>
+
+      <span>{{ quiz.title }}</span>
+
+      <span
+        class="chip-status"
+        [ngClass]="quiz.status === 'PUBLISHED' ? 'badge-gr' : 'badge-am'"
+      >
+        {{ quiz.status }}
+      </span>
+
+      <span
+        class="chip-delete"
+        (click)="deleteQuiz(quiz, $event)"
+      >
+        &times;
+      </span>
+    </div>
+
+    <div
+      *ngIf="!loading && quizzes.length > 0 && displayedQuizzes.length === 0"
+      class="quiz-empty"
+    >
+      No quizzes match your search.
+    </div>
+  </div>
+
+  <div class="card form-card" *ngIf="showNewQuizForm">
+    <div class="sec-hd">
+      <span class="sec-title">Create a new quiz</span>
+    </div>
+
+    <div class="form-row">
+      <input
+        type="text"
+        placeholder="Quiz title, e.g. NISM Mock Quiz 2"
+        [(ngModel)]="newQuiz.title"
+      />
+    </div>
+
+    <div class="form-row form-row-3">
+      <label class="mini-field">
+        <span class="mini-label">Course</span>
+        <select [(ngModel)]="newQuiz.courseId">
+          <option value="">No course (standalone)</option>
+          <option *ngFor="let course of courses" [value]="course.id">
+            {{ course.title }}
+          </option>
+        </select>
+      </label>
+
+      <label class="mini-field">
+        <span class="mini-label">Duration (minutes)</span>
+        <input
+          type="number"
+          min="1"
+          placeholder="e.g. 30"
+          [(ngModel)]="newQuiz.durationMinutes"
+        />
+      </label>
+
+      <label class="mini-field">
+        <span class="mini-label">Pass percentage</span>
+        <input
+          type="number"
+          min="1"
+          max="100"
+          placeholder="e.g. 60"
+          [(ngModel)]="newQuiz.passPercent"
+        />
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-primary" (click)="createQuiz()">
+        Create quiz
+      </button>
+
+      <button class="btn btn-outline" (click)="toggleNewQuizForm()">
+        Cancel
+      </button>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="state-message">
+    Loading quizzes…
+  </div>
+
+  <div *ngIf="!loading && quizzes.length === 0" class="state-message">
+    No quizzes yet. Click "+ New quiz" to build your first one.
+  </div>
+
+  <div
+    class="card"
+    *ngIf="!loading && selectedQuiz && activeTab === 'builder'"
+  >
+    <div class="quiz-header">
+      <div class="quiz-title">{{ selectedQuiz.title }}</div>
+
+      <div class="quiz-header-actions">
+        <span class="badge badge-am">
+          {{ selectedQuiz.durationMinutes }} min ·
+          {{ selectedQuiz.totalQuestions }} Qs ·
+          Pass: {{ selectedQuiz.passPercent }}%
+        </span>
+
+        <button class="btn btn-outline btn-sm" (click)="openEditQuiz()">
+          Edit settings
+        </button>
+
+        <button
+          class="btn btn-danger btn-sm"
+          (click)="deleteQuiz(selectedQuiz, $event)"
+        >
+          Delete test
+        </button>
+
+        <button
+          class="btn btn-success"
+          (click)="publishQuiz()"
+          [disabled]="
+            selectedQuiz.status === 'PUBLISHED' ||
+            selectedQuiz.totalQuestions === 0
+          "
+        >
+          {{ selectedQuiz.status === 'PUBLISHED' ? 'Published' : 'Publish' }}
+        </button>
+      </div>
+    </div>
+
+    <p
+      class="helper-text"
+      *ngIf="selectedQuiz.status !== 'PUBLISHED'"
+    >
+      This quiz is a draft - learners can't see it yet. Add at least one
+      question, then click Publish when it's ready.
+    </p>
+
+    <div class="card form-card" *ngIf="showEditQuizForm">
+      <div class="sec-hd">
+        <span class="sec-title">Quiz settings</span>
+      </div>
+
+      <div class="form-row">
+        <input
+          type="text"
+          placeholder="Quiz title"
+          [(ngModel)]="editQuiz.title"
+        />
+      </div>
+
+      <div class="form-row form-row-3">
+        <label class="mini-field">
+          <span class="mini-label">Course</span>
+          <select [(ngModel)]="editQuiz.courseId">
+            <option value="">No course (standalone)</option>
+            <option *ngFor="let course of courses" [value]="course.id">
+              {{ course.title }}
+            </option>
+          </select>
+        </label>
+
+        <label class="mini-field">
+          <span class="mini-label">Duration (minutes)</span>
+          <input
+            type="number"
+            min="1"
+            placeholder="e.g. 30"
+            [(ngModel)]="editQuiz.durationMinutes"
+          />
+        </label>
+
+        <label class="mini-field">
+          <span class="mini-label">Pass percentage</span>
+          <input
+            type="number"
+            min="1"
+            max="100"
+            placeholder="e.g. 60"
+            [(ngModel)]="editQuiz.passPercent"
+          />
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="saveQuizSettings()">
+          Save changes
+        </button>
+
+        <button class="btn btn-outline" (click)="cancelEditQuiz()">
+          Cancel
+        </button>
+      </div>
+    </div>
+
+    <div
+      class="state-message"
+      *ngIf="selectedQuiz.questions.length === 0"
+    >
+      No questions yet. Click "+ Add question" below to build this quiz.
+    </div>
+
+    <div
+      class="q-card"
+      *ngFor="let question of selectedQuiz.questions; let i = index"
+    >
+      <div class="q-meta">
+        Q{{ i + 1 }} ·
+        {{ question.type === 'MCQ' ? 'Multiple choice' : 'True / False' }}
+      </div>
+
+      <div class="q-text">{{ question.text }}</div>
+
+      <div class="q-options">
+        <div
+          class="q-opt"
+          [class.correct]="opt.correct"
+          *ngFor="let opt of question.options"
+        >
+          <div class="q-dot" [class.filled]="opt.correct"></div>
+          {{ opt.text }}
+          <span *ngIf="opt.correct">✓</span>
+        </div>
+      </div>
+
+      <div class="q-actions">
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="openEditQuestion(question)"
+        >
+          Edit
+        </button>
+
+        <button
+          class="btn btn-outline btn-sm"
+          (click)="deleteQuestion(question)"
+        >
+          Delete
+        </button>
+      </div>
+    </div>
+
+    <button class="btn btn-outline" (click)="openAddQuestion()">
+      + Add question
+    </button>
+
+    <div class="card form-card" *ngIf="showQuestionForm">
+      <div class="sec-hd">
+        <span class="sec-title">
+          {{ editingQuestionId ? 'Edit question' : 'New question' }}
+        </span>
+      </div>
+
+      <div class="form-row">
+        <textarea
+          rows="2"
+          placeholder="Question text"
+          [(ngModel)]="questionForm.text"
+        ></textarea>
+      </div>
+
+      <div class="form-row">
+        <select
+          [(ngModel)]="questionForm.type"
+          (ngModelChange)="onQuestionTypeChange()"
+        >
+          <option value="MCQ">Multiple choice</option>
+          <option value="TRUE_FALSE">True / False</option>
+        </select>
+      </div>
+
+      <div
+        class="option-row"
+        *ngFor="let opt of questionForm.options; let i = index"
+      >
+        <input
+          type="radio"
+          name="correctOption"
+          [checked]="opt.correct"
+          (change)="markCorrect(i)"
+        />
+
+        <input
+          type="text"
+          placeholder="Option text"
+          [(ngModel)]="opt.text"
+          [disabled]="questionForm.type === 'TRUE_FALSE'"
+        />
+
+        <button
+          class="remove-option"
+          type="button"
+          *ngIf="
+            questionForm.type === 'MCQ' &&
+            questionForm.options.length > 2
+          "
+          (click)="removeOption(i)"
+        >
+          &times;
+        </button>
+      </div>
+
+      <button
+        class="btn btn-outline btn-sm"
+        *ngIf="questionForm.type === 'MCQ'"
+        (click)="addOption()"
+      >
+        + Add option
+      </button>
+
+      <div class="form-actions">
+        <button class="btn btn-primary" (click)="saveQuestion()">
+          Save question
+        </button>
+
+        <button class="btn btn-outline" (click)="cancelQuestionForm()">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div
+    class="card"
+    *ngIf="!loading && selectedQuiz && activeTab === 'results'"
+  >
+    <div class="sec-hd">
+      <span class="sec-title">
+        Result overview — {{ selectedQuiz.title }}
+      </span>
+    </div>
+
+    <div class="results-grid" *ngIf="results">
+      <div class="result-tile result-pass">
+        <div class="result-number">{{ results.passedCount }}</div>
+        <div class="result-label">Passed</div>
+      </div>
+
+      <div class="result-tile result-fail">
+        <div class="result-number">{{ results.failedCount }}</div>
+        <div class="result-label">Failed</div>
+      </div>
+
+      <div class="result-tile result-avg">
+        <div class="result-number">{{ results.avgScorePercent }}%</div>
+        <div class="result-label">Avg score</div>
+      </div>
+    </div>
+
+    <table
+      class="tbl"
+      *ngIf="results && results.attempts.length > 0"
+    >
+      <thead>
+        <tr>
+          <th style="width: 48px; text-align: center;">#</th>
+          <th>Learner</th>
+          <th>Score</th>
+          <th>Result</th>
+          <th>Submitted</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr
+          *ngFor="let attempt of results.attempts; let attemptIndex = index"
+        >
+          <td style="text-align: center; color: var(--text-3);">
+            {{ attemptIndex + 1 }}
+          </td>
+
+          <td>{{ attempt.userName }}</td>
+
+          <td>{{ attempt.scorePercent }}%</td>
+
+          <td>
+            <span
+              class="badge"
+              [ngClass]="attempt.passed ? 'badge-gr' : 'badge-re'"
+            >
+              {{ attempt.passed ? 'Passed' : 'Failed' }}
+            </span>
+          </td>
+
+          <td>{{ attempt.submittedAt | date:'mediumDate' }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div
+      class="state-message"
+      *ngIf="results && results.attempts.length === 0"
+    >
+      No attempts yet for this quiz.
+    </div>
+  </div>
+</div>

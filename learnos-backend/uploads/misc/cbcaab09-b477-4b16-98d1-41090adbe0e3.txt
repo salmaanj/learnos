@@ -1,0 +1,7 @@
+Introduction to Flutter
+
+Flutter is Google's open-source UI toolkit for building beautiful, fast, and natively compiled applications from a single codebase. Using the Dart programming language, developers can create applications for Android, iOS, web, Windows, macOS, and Linux without maintaining separate codebases.
+
+Flutter uses widgets as the building blocks of every application. Everything you see on the screen—from buttons and text to images and layouts—is created using widgets. This approach makes it easy to build responsive and reusable user interfaces.
+
+In this lesson, you learned what Flutter is, why it is popular, and how it enables developers to build cross-platform applications efficiently. In the next lesson, you'll install Flutter and create your first application.

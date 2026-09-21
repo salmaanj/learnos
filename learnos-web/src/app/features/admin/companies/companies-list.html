@@ -1,0 +1,82 @@
+<div class="page">
+  <div class="grid">
+    <article
+      *ngFor="let company of companies"
+      class="company-card"
+      [ngClass]="company.brandClass"
+    >
+      <div class="company-header">
+        <div class="avatar" aria-hidden="true">
+          <img
+            *ngIf="company.logoUrl; else initialsAvatar"
+            class="company-logo"
+            [src]="company.logoUrl"
+            [alt]="company.name + ' logo'"
+            (error)="onLogoError(company)"
+          />
+
+          <ng-template #initialsAvatar>
+            {{ company.initials }}
+          </ng-template>
+        </div>
+
+        <div class="company-details">
+          <h3 [title]="company.name">{{ company.name }}</h3>
+
+          <p [title]="company.industry">
+            {{ company.industry || 'General' }}
+          </p>
+
+          <span class="company-code">
+            {{ company.companyCode || '—' }}
+          </span>
+        </div>
+      </div>
+
+      <div class="company-metrics">
+        <div class="metric">
+          <strong>{{ company.learners }}</strong>
+          <span>Learners</span>
+        </div>
+
+        <div class="metric">
+          <strong>{{ company.courses }}</strong>
+          <span>Courses</span>
+        </div>
+
+        <div class="metric">
+          <strong>{{ company.revenue }}</strong>
+          <span>Course Revenue</span>
+        </div>
+      </div>
+
+      <div class="company-meta">
+        <span>Since {{ company.joined }}</span>
+
+        <span
+          class="status"
+          [ngClass]="getStatusClass(company.status)"
+        >
+          {{ getPlanLabel(company) }}
+        </span>
+      </div>
+
+      <div class="company-actions">
+        <a [routerLink]="['/admin/companies', company.id, 'edit']">
+          Edit
+        </a>
+
+        <a
+          [routerLink]="['/admin/companies/users']"
+          [queryParams]="{ companyId: company.id }"
+        >
+          Users
+        </a>
+      </div>
+    </article>
+  </div>
+
+  <div *ngIf="!companies.length" class="empty-state">
+    No companies found.
+  </div>
+</div>

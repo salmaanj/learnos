@@ -1,0 +1,78 @@
+<div class="page" *ngIf="loading">
+  <div class="state-message">Loading quiz…</div>
+</div>
+
+<div class="page" *ngIf="!loading && errorMessage && !quiz">
+  <div class="error-banner">{{ errorMessage }}</div>
+  <a routerLink="/learn/courses" class="back-link">&larr; Back to courses</a>
+</div>
+
+<div class="page" *ngIf="!loading && quiz && !result">
+  <a routerLink="/learn/courses" class="back-link">&larr; Exit quiz</a>
+
+  <div class="quiz-header">
+    <h1 class="quiz-title">{{ quiz.title }}</h1>
+    <span class="quiz-meta">
+      {{ quiz.durationMinutes }} min · Pass {{ quiz.passPercent }}%
+    </span>
+  </div>
+
+  <div class="progress-track">
+    <div class="progress-fill"
+         [style.width.%]="((currentIndex + 1) / quiz.questions.length) * 100">
+    </div>
+  </div>
+  <p class="progress-label">
+    Question {{ currentIndex + 1 }} of {{ quiz.questions.length }}
+  </p>
+
+  <div class="question-card" *ngIf="currentQuestion">
+    <h3 class="question-text">{{ currentQuestion.text }}</h3>
+
+    <div class="option-list">
+      <div class="option-row"
+           *ngFor="let option of currentQuestion.options"
+           [class.selected]="isSelected(currentQuestion.id, option.id)"
+           (click)="selectAnswer(currentQuestion.id, option.id)">
+        <span class="radio-dot"
+              [class.filled]="isSelected(currentQuestion.id, option.id)"></span>
+        <span class="option-text">{{ option.text }}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-banner" *ngIf="errorMessage">{{ errorMessage }}</div>
+
+  <div class="nav-bar">
+    <button class="btn btn-outline"
+            *ngIf="currentIndex > 0"
+            (click)="previousQuestion()">
+      Back
+    </button>
+
+    <button class="btn btn-primary"
+            [disabled]="!currentQuestion || !answers[currentQuestion.id] || submitting"
+            *ngIf="!isLastQuestion"
+            (click)="nextQuestion()">
+      Next
+    </button>
+
+    <button class="btn btn-primary"
+            [disabled]="!currentQuestion || !answers[currentQuestion.id] || submitting"
+            *ngIf="isLastQuestion"
+            (click)="submit()">
+      {{ submitting ? 'Submitting…' : 'Submit' }}
+    </button>
+  </div>
+</div>
+
+<div class="page" *ngIf="result">
+  <div class="result-card" [class.passed]="result.passed" [class.failed]="!result.passed">
+    <div class="result-icon">{{ result.passed ? '✅' : '❌' }}</div>
+    <h2 class="result-title">{{ result.passed ? 'You passed!' : 'Not quite there' }}</h2>
+    <p class="result-score">
+      {{ result.scorePercent }}% · {{ result.correctCount }}/{{ result.totalQuestions }} correct
+    </p>
+    <button class="btn btn-primary" (click)="close()">Done</button>
+  </div>
+</div>

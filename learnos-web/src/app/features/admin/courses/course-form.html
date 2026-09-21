@@ -1,0 +1,175 @@
+<div class="card">
+  <div class="sec-hd">
+    <span class="sec-title">{{ isEdit ? 'Edit Course' : 'New Course' }}</span>
+    <div class="header-actions">
+      <button *ngIf="isEdit && courseId" type="button" class="btn btn-outline"
+              [routerLink]="['/admin/courses', courseId, 'content']">
+        Manage Modules &amp; Lessons →
+      </button>
+      <button class="btn btn-outline" routerLink="/admin/courses">Cancel</button>
+    </div>
+  </div>
+
+
+  <p class="step-hint" *ngIf="!isEdit">
+    Step 1 of 2: set up the course details below. Once saved, you'll move on to adding modules and lessons.
+  </p>
+
+
+  <div class="field field-full">
+    <label>Course thumbnail</label>
+    <div class="thumbnail-row">
+      <div class="thumbnail-preview">
+        <img *ngIf="isEdit && thumbnailUrl" [src]="thumbnailUrl" alt="Course thumbnail" />
+        <img *ngIf="!isEdit && pendingThumbnailPreview" [src]="pendingThumbnailPreview" alt="Course thumbnail" />
+        <div class="thumbnail-placeholder" *ngIf="(isEdit && !thumbnailUrl) || (!isEdit && !pendingThumbnailPreview)">
+          <span>{{ (form.value.title || 'C').charAt(0).toUpperCase() }}</span>
+        </div>
+      </div>
+      <div>
+        <input type="file" accept="image/*" (change)="onThumbnailSelected($event)" [disabled]="thumbnailUploading" />
+        <small class="hint" *ngIf="isEdit">
+          {{ thumbnailUploading ? 'Uploading…' : 'No image? A default is shown automatically using the course title.' }}
+        </small>
+        <small class="hint" *ngIf="!isEdit">
+          {{ pendingThumbnailFile ? 'Selected — will be uploaded once the course is created.' : 'Optional. No image? A default is shown automatically using the course title.' }}
+        </small>
+      </div>
+    </div>
+  </div>
+
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="form-row" *ngIf="isSuperAdmin">
+      <div class="field field-full">
+        <label>Company <small class="hint">(Super Admin only)</small></label>
+        <select formControlName="companyId">
+          <option value="">-- Select Company --</option>
+          <option *ngFor="let co of companies" [value]="co.id">{{ co.name }}</option>
+        </select>
+      </div>
+    </div>
+
+
+    <div class="form-row">
+      <div class="field">
+        <label>Course title</label>
+        <input type="text" formControlName="title" />
+      </div>
+      <div class="field">
+        <label>Level</label>
+        <select formControlName="level">
+          <option value="BEGINNER">Beginner</option>
+          <option value="INTERMEDIATE">Intermediate</option>
+          <option value="ADVANCED">Advanced</option>
+        </select>
+      </div>
+    </div>
+
+
+    <div class="form-row">
+      <div class="field">
+        <label>Category</label>
+        <select formControlName="categoryId">
+          <option value="">-- Select Category --</option>
+          <option *ngFor="let cat of categories" [value]="cat.id">{{ cat.name }}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Status</label>
+        <select formControlName="status">
+          <option value="DRAFT">Draft</option>
+          <option value="PUBLISHED">Published</option>
+        </select>
+        <small class="hint">Only Published courses are visible to learners.</small>
+      </div>
+    </div>
+
+
+    <div class="form-row">
+      <div class="field">
+        <label>Instructor</label>
+        <select formControlName="instructorId">
+          <option value="">-- No instructor assigned --</option>
+          <option *ngFor="let tutor of instructors" [value]="tutor.id">{{ tutor.name }}</option>
+        </select>
+        <small *ngIf="instructors.length === 0" class="hint">
+          No tutors found for this company yet. Add a company user with the "Tutor" role first.
+        </small>
+      </div>
+    </div>
+
+
+    <div class="form-row">
+      <div class="field">
+        <label>Paid course</label>
+        <select formControlName="isPaid">
+          <option [ngValue]="false">No — Free</option>
+          <option [ngValue]="true">Yes — Paid</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Price</label>
+        <input type="number" formControlName="price" />
+      </div>
+    </div>
+
+
+    <div class="form-row">
+      <div class="field">
+        <label>Duration (minutes)</label>
+        <input type="number" formControlName="durationMinutes" />
+      </div>
+      <div class="field">
+        <label>Language</label>
+        <input type="text" formControlName="language" />
+      </div>
+    </div>
+
+
+    <div class="field field-full">
+      <label class="check-inline">
+        <input type="checkbox" formControlName="featured" />
+        <span>Feature this course (shown on the mobile app home screen)</span>
+      </label>
+    </div>
+
+
+    <div class="field field-full">
+      <label>Short description</label>
+      <textarea class="text-input" formControlName="shortDescription"></textarea>
+    </div>
+
+
+    <div class="field field-full">
+      <label>Description</label>
+      <textarea class="text-input" formControlName="description"></textarea>
+    </div>
+
+
+    <div class="form-row">
+      <div class="field">
+        <label>Tags <small class="hint">(comma separated)</small></label>
+        <input type="text" formControlName="tags" />
+      </div>
+      <div class="field">
+        <label>Prerequisites <small class="hint">(comma separated)</small></label>
+        <input type="text" formControlName="prerequisites" />
+      </div>
+    </div>
+
+
+    <div class="field field-full">
+      <label>Learning outcomes <small class="hint">(comma separated)</small></label>
+      <textarea class="text-input" formControlName="learningOutcomes"></textarea>
+    </div>
+
+
+    <div class="error" *ngIf="error">{{ error }}</div>
+
+
+    <button type="submit" class="btn btn-primary" [disabled]="loading || submitting">
+      {{ submitting ? 'Saving...' : (isEdit ? 'Save Course Details' : 'Create Course & Continue →') }}
+    </button>
+  </form>
+</div>

@@ -1,0 +1,271 @@
+<div class="learner-enrollments-page">
+  <a
+    class="back-link"
+    routerLink="/admin/learners"
+  >
+    ← Back to Learners
+  </a>
+
+  <div *ngIf="loading" class="page-state">
+    Loading learner enrollment details…
+  </div>
+
+  <div
+    *ngIf="!loading && errorMessage"
+    class="page-error"
+  >
+    {{ errorMessage }}
+  </div>
+
+  <ng-container
+    *ngIf="!loading && !errorMessage && learner"
+  >
+    <header class="page-header">
+      <div>
+        <p class="page-kicker">Learner enrollment</p>
+
+        <h1>{{ learner.name }}</h1>
+
+        <p class="learner-contact">
+          {{ learner.email }}
+
+          <span *ngIf="learner.phone">
+            · {{ learner.phone }}
+          </span>
+
+          <span *ngIf="learner.companyName">
+            · {{ learner.companyName }}
+          </span>
+        </p>
+      </div>
+
+      <a
+        class="btn btn-outline"
+        [routerLink]="[
+          '/admin/companies/users',
+          learner.id,
+          'edit'
+        ]"
+        [queryParams]="{ role: 'LEARNER' }"
+      >
+        Edit learner
+      </a>
+    </header>
+
+    <section class="learner-summary">
+      <div>
+        <span>Enrolled courses</span>
+        <strong>{{ learnerEnrollments.length }}</strong>
+      </div>
+
+      <div>
+        <span>Average progress</span>
+        <strong>{{ learner.avgProgressPercent }}%</strong>
+      </div>
+
+      <div>
+        <span>Learner status</span>
+        <strong>{{ learner.status }}</strong>
+      </div>
+
+      <div>
+        <span>Available courses</span>
+        <strong>{{ filteredAvailableCourses.length }}</strong>
+      </div>
+    </section>
+
+    <section class="enroll-card">
+      <div class="section-heading">
+        <div>
+          <h2>Enroll in a course</h2>
+
+          <p>
+            Search the available courses, select one, then enroll
+            {{ learner.name }}.
+          </p>
+        </div>
+      </div>
+
+      <div *ngIf="enrollmentError" class="enrollment-error">
+        {{ enrollmentError }}
+      </div>
+
+      <div class="course-picker">
+        <input
+          type="search"
+          class="course-search"
+          placeholder="Search courses by title or category..."
+          [(ngModel)]="courseSearchTerm"
+        />
+
+        <select [(ngModel)]="selectedCourseId">
+          <option value="">
+            Select a course to enroll
+          </option>
+
+          <option
+            *ngFor="let course of filteredAvailableCourses"
+            [value]="course.id"
+          >
+            {{ course.title }} · {{ course.category }}
+          </option>
+        </select>
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="enrolling || !selectedCourseId"
+          (click)="enrollSelectedCourse()"
+        >
+          {{
+            enrolling
+              ? 'Enrolling…'
+              : 'Enroll learner'
+          }}
+        </button>
+      </div>
+
+      <p
+        *ngIf="
+          !loadingEnrollments &&
+          filteredAvailableCourses.length === 0
+        "
+        class="helper-text"
+      >
+        There are no additional courses available for this learner’s
+        company, or the learner is already enrolled in all available
+        courses.
+      </p>
+    </section>
+
+    <section class="enrolled-courses-card">
+      <div class="section-heading">
+        <div>
+          <h2>Enrolled courses</h2>
+
+          <p>
+            View learner progress or remove course access.
+          </p>
+        </div>
+      </div>
+
+      <div *ngIf="loadingEnrollments" class="enrollment-state">
+        Loading enrolled courses…
+      </div>
+
+      <div
+        *ngIf="
+          !loadingEnrollments &&
+          learnerEnrollments.length === 0
+        "
+        class="enrollment-state"
+      >
+        This learner is not enrolled in any courses yet.
+      </div>
+
+      <div
+        *ngIf="
+          !loadingEnrollments &&
+          learnerEnrollments.length > 0
+        "
+        class="enrollment-table-wrap"
+      >
+        <table class="enrollment-table">
+          <thead>
+            <tr>
+              <th>Course</th>
+              <th>Category</th>
+              <th>Progress</th>
+              <th>Enrolled</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              *ngFor="
+                let enrollment of filteredEnrollments;
+                trackBy: trackByEnrollmentId
+              "
+            >
+              <td>
+                <strong>{{ enrollment.courseTitle }}</strong>
+              </td>
+
+              <td>
+                {{ enrollment.courseCategory || '—' }}
+              </td>
+
+              <td>
+                <div class="enrollment-progress">
+                  <div class="prog enrollment-progress-bar">
+                    <div
+                      class="prog-fill"
+                      [style.width.%]="
+                        enrollment.progressPercent
+                      "
+                      [style.background]="
+                        enrollment.progressPercent >= 100
+                          ? 'var(--gr)'
+                          : 'var(--pu)'
+                      "
+                    ></div>
+                  </div>
+
+                  <span>
+                    {{ enrollment.progressPercent }}%
+                  </span>
+                </div>
+              </td>
+
+              <td>
+                {{
+                  formatEnrollmentDate(
+                    enrollment.enrolledAt
+                  )
+                }}
+              </td>
+
+              <td>
+                <span
+                  class="enrollment-status"
+                  [ngClass]="
+                    enrollmentStatusClass(
+                      enrollment.status
+                    )
+                  "
+                >
+                  {{
+                    enrollmentStatusLabel(
+                      enrollment.status
+                    )
+                  }}
+                </span>
+              </td>
+
+              <td>
+                <button
+                  type="button"
+                  class="remove-enrollment"
+                  [disabled]="
+                    removingEnrollmentId ===
+                    enrollment.enrollmentId
+                  "
+                  (click)="removeEnrollment(enrollment)"
+                >
+                  {{
+                    removingEnrollmentId ===
+                    enrollment.enrollmentId
+                      ? 'Removing…'
+                      : 'Remove'
+                  }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</div>

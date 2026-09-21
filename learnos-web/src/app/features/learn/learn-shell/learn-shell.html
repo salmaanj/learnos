@@ -1,0 +1,79 @@
+<div class="learn-shell">
+  <header class="topbar">
+    <div class="brand">
+      <img
+        class="learnos-logo"
+        src="/learnos-icon.jpg"
+        alt="LearnOS"
+      />
+
+      <div
+        *ngIf="companyLogoUrl"
+        class="company-logo-wrap"
+        [title]="companyName"
+      >
+        <img
+          class="company-logo"
+          [src]="companyLogoUrl"
+          [alt]="companyName + ' logo'"
+          (error)="onCompanyLogoError()"
+        />
+      </div>
+
+      <span class="brand-name">{{ companyName }}</span>
+    </div>
+
+    <nav class="nav">
+      <a
+        routerLink="/learn/courses"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        Browse Courses
+      </a>
+
+      <a
+        routerLink="/learn/my-courses"
+        routerLinkActive="active"
+      >
+        My Courses
+      </a>
+      <a
+        class="nav-item"
+        [routerLink]="['/learn', 'live-classes']"
+        routerLinkActive="active"
+        [routerLinkActiveOptions]="{ exact: true }"
+      >
+        <span class="nav-icon">◉</span>
+        <span>Live Classes</span>
+      </a>
+      <a
+        routerLink="/learn/certificates"
+        routerLinkActive="active"
+      >
+        My Certificates
+      </a>
+      <a
+        routerLink="/learn/payment-history"
+        routerLinkActive="active"
+      >
+        Payment History
+      </a>
+    </nav>
+
+    <div class="user">
+      <span>{{ userName }}</span>
+
+      <button
+        class="btn btn-outline btn-sm"
+        (click)="logout()"
+      >
+        Log out
+      </button>
+    </div>
+  </header>
+
+  <main class="content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

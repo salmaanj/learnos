@@ -1,0 +1,73 @@
+Folder PATH listing
+Volume serial number is 6C50-96BF
+C:\PROJECTS\LEARNOS\LEARNOS_MOBILE\LIB
+|   app_router.dart
+|   main.dart
+|   
++---core
+|   +---constants
+|   |       api_constants.dart
+|   |       app_constants.dart
+|   |       
+|   +---network
+|   |       api_client.dart
+|   |       
+|   +---storage
+|   |       secure_storage.dart
+|   |       
+|   +---theme
+|   |       app_colors.dart
+|   |       app_text_styles.dart
+|   |       app_theme.dart
+|   |       
+|   \---widgets
+|           app_button.dart
+|           app_loader.dart
+|           app_text_field.dart
+|           
+\---features
+    +---auth
+    |   +---models
+    |   |       user_model.dart
+    |   |       
+    |   +---providers
+    |   |       auth_provider.dart
+    |   |       
+    |   +---screens
+    |   |       forgot_password_screen.dart
+    |   |       login_screen.dart
+    |   |       otp_screen.dart
+    |   |       register_screen.dart
+    |   |       
+    |   \---services
+    |           auth_service.dart
+    |           
+    +---courses
+    |   +---models
+    |   |       course_model.dart
+    |   |       
+    |   +---providers
+    |   |       course_provider.dart
+    |   |       
+    |   +---screens
+    |   |       course_detail_screen.dart
+    |   |       course_list_screen.dart
+    |   |       
+    |   +---services
+    |   |       course_service.dart
+    |   |       
+    |   \---widgets
+    |           course_card.dart
+    |           
+    +---home
+    |   \---screens
+    |           home_screen.dart
+    |           
+    +---onboarding
+    |   \---screens
+    |           onboarding_screen.dart
+    |           
+    \---splash
+        \---screens
+                splash_screen.dart
+                

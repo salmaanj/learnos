@@ -1,0 +1,32 @@
+<div class="card">
+  <div class="sec-hd">
+    <span class="sec-title">{{ isEdit ? 'Edit Category' : 'New Category' }}</span>
+    <button class="btn btn-outline" routerLink="/admin/courses/categories">Cancel</button>
+  </div>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="field field-full" *ngIf="isSuperAdmin">
+      <label>Company (Super Admin only)</label>
+      <select formControlName="companyId">
+        <option value="">-- Select Company --</option>
+        <option *ngFor="let co of companies" [value]="co.id">{{ co.name }}</option>
+      </select>
+    </div>
+
+    <div class="field field-full">
+      <label>Category name</label>
+      <input type="text" formControlName="name" placeholder="e.g. Cloud Computing" />
+    </div>
+
+    <div class="field field-full">
+      <label>Description</label>
+      <textarea class="text-input" formControlName="description" placeholder="Short description of this category"></textarea>
+    </div>
+
+    <div class="error" *ngIf="error">{{ error }}</div>
+
+    <button type="submit" class="btn btn-primary" [disabled]="loading || submitting">
+      {{ submitting ? 'Saving...' : (isEdit ? 'Update Category' : 'Create Category') }}
+    </button>
+  </form>
+</div>

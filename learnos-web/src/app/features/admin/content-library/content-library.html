@@ -1,0 +1,465 @@
+<div class="library-page">
+  <section class="library-toolbar card">
+    <div class="toolbar-heading">
+      <div>
+        <h2>Content library</h2>
+        <p>
+          Upload and reuse learning resources across courses
+          and live classes.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="btn btn-primary"
+        (click)="openCreateForm()"
+      >
+        + Upload Content
+      </button>
+    </div>
+
+    <div class="toolbar-filters">
+      <input
+        #librarySearch
+        type="search"
+        class="library-search"
+        placeholder="Search title, description or tags..."
+        [value]="searchTerm"
+        (input)="
+          searchTerm = librarySearch.value;
+          onSearchChange()
+        "
+      />
+
+      <select
+        class="library-select"
+        [(ngModel)]="selectedType"
+        (ngModelChange)="onFilterChange()"
+      >
+        <option value="">All types</option>
+
+        <option
+          *ngFor="let type of contentTypes"
+          [value]="type.value"
+        >
+          {{ type.label }}
+        </option>
+      </select>
+
+      <select
+        class="library-select"
+        [(ngModel)]="selectedStatus"
+        (ngModelChange)="onFilterChange()"
+      >
+        <option value="ACTIVE">Active</option>
+        <option value="ARCHIVED">Archived</option>
+      </select>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="clearFilters()"
+      >
+        Clear
+      </button>
+    </div>
+  </section>
+
+  <div *ngIf="loading" class="library-state card">
+    Loading content library...
+  </div>
+
+  <div *ngIf="!loading && error" class="library-error card">
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+    <section
+      *ngIf="items.length > 0"
+      class="library-grid"
+    >
+      <article
+        *ngFor="let item of items; trackBy: trackById"
+        class="library-item card"
+      >
+        <div
+          class="item-type-icon"
+          [class.video]="item.type === 'VIDEO'"
+          [class.audio]="item.type === 'AUDIO'"
+          [class.pdf]="item.type === 'PDF'"
+          [class.slides]="item.type === 'SLIDES'"
+          [class.document]="item.type === 'DOCUMENT'"
+          [class.image]="item.type === 'IMAGE'"
+          [class.link]="item.type === 'LINK'"
+        >
+          {{ typeIcon(item.type) }}
+        </div>
+
+        <div class="item-main">
+          <div class="item-heading">
+            <div>
+              <span class="item-type">
+                {{ typeLabel(item.type) }}
+              </span>
+
+              <h3>{{ item.title }}</h3>
+            </div>
+
+            <span
+              class="status-badge"
+              [class.archived]="item.status === 'ARCHIVED'"
+            >
+              {{
+                item.status === 'ARCHIVED'
+                  ? 'Archived'
+                  : 'Active'
+              }}
+            </span>
+          </div>
+
+          <p class="item-description">
+            {{
+              item.description ||
+              'No description added.'
+            }}
+          </p>
+
+          <div class="item-meta">
+            <span *ngIf="formatDuration(item.durationSeconds)">
+              {{ formatDuration(item.durationSeconds) }}
+            </span>
+
+            <span *ngIf="item.fileSizeBytes">
+              {{ formatBytes(item.fileSizeBytes) }}
+            </span>
+
+            <span *ngIf="item.originalFileName">
+              {{ item.originalFileName }}
+            </span>
+          </div>
+
+          <div
+            *ngIf="item.tags"
+            class="item-tags"
+          >
+            {{ item.tags }}
+          </div>
+
+          <div class="item-actions">
+            <button
+              type="button"
+              class="btn btn-outline"
+              (click)="openEditForm(item)"
+            >
+              Edit
+            </button>
+
+            <button
+              *ngIf="item.status === 'ACTIVE'"
+              type="button"
+              class="btn btn-outline"
+              (click)="archiveItem(item)"
+            >
+              Archive
+            </button>
+
+            <button
+              *ngIf="item.status === 'ARCHIVED'"
+              type="button"
+              class="btn btn-outline"
+              (click)="restoreItem(item)"
+            >
+              Restore
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-danger"
+              (click)="deleteItem(item)"
+            >
+              Delete
+            </button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section
+      *ngIf="items.length === 0"
+      class="empty-library card"
+    >
+      <div class="empty-icon">▣</div>
+
+      <h2>
+        {{
+          selectedStatus === 'ARCHIVED'
+            ? 'No archived content'
+            : 'Your content library is empty'
+        }}
+      </h2>
+
+      <p>
+        {{
+          selectedStatus === 'ARCHIVED'
+            ? 'Archived resources will appear here.'
+            : 'Upload a video, document, PDF, image, audio file, slides, or link to create your first reusable learning resource.'
+        }}
+      </p>
+
+      <button
+        *ngIf="selectedStatus !== 'ARCHIVED'"
+        type="button"
+        class="btn btn-primary"
+        (click)="openCreateForm()"
+      >
+        + Upload Content
+      </button>
+    </section>
+
+    <div
+      *ngIf="totalElements > 0"
+      class="pagination-row"
+    >
+      <span>
+        Showing
+        {{ page * pageSize + 1 }}
+        –
+        {{
+          Math.min(
+            (page + 1) * pageSize,
+            totalElements
+          )
+        }}
+        of {{ totalElements }}
+      </span>
+
+      <div class="pagination-actions">
+        <button
+          type="button"
+          class="btn btn-outline"
+          [disabled]="page === 0 || loading"
+          (click)="previousPage()"
+        >
+          ← Previous
+        </button>
+
+        <span>
+          Page {{ page + 1 }} of {{ totalPages || 1 }}
+        </span>
+
+        <button
+          type="button"
+          class="btn btn-outline"
+          [disabled]="
+            loading ||
+            totalPages === 0 ||
+            page >= totalPages - 1
+          "
+          (click)="nextPage()"
+        >
+          Next →
+        </button>
+      </div>
+    </div>
+  </ng-container>
+
+  <div
+    *ngIf="showForm"
+    class="modal-backdrop"
+    (click)="closeForm()"
+  >
+    <section
+      class="content-form-modal"
+      (click)="$event.stopPropagation()"
+    >
+      <div class="form-header">
+        <div>
+          <h2>
+            {{
+              editingItem
+                ? 'Edit content'
+                : 'Upload content'
+            }}
+          </h2>
+
+          <p>
+            Add a reusable item to your company content library.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="close-button"
+          [disabled]="saving || uploading"
+          (click)="closeForm()"
+          aria-label="Close"
+        >
+          ×
+        </button>
+      </div>
+
+      <div
+        *ngIf="formError"
+        class="form-error"
+      >
+        {{ formError }}
+      </div>
+
+      <div class="form-grid">
+        <label class="form-field full-width">
+          <span>Title *</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.title"
+            placeholder="For example, New employee orientation"
+          />
+        </label>
+
+        <label class="form-field">
+          <span>Content type *</span>
+
+          <select [(ngModel)]="form.type">
+            <option
+              *ngFor="let type of contentTypes"
+              [value]="type.value"
+            >
+              {{ type.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Duration in seconds</span>
+
+          <input
+            type="number"
+            min="0"
+            [(ngModel)]="form.durationSeconds"
+            placeholder="Optional"
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Description</span>
+
+          <textarea
+            rows="3"
+            [(ngModel)]="form.description"
+            placeholder="Describe how and where this resource should be used."
+          ></textarea>
+        </label>
+
+        <label class="form-field full-width">
+          <span>
+            Upload file
+            <small>
+              Video, audio, PDF, slides, documents or images.
+            </small>
+          </span>
+
+          <input
+            type="file"
+            (change)="onFileSelected($event)"
+          />
+
+          <small
+            class="selected-file"
+            *ngIf="selectedFileName"
+          >
+            Selected: {{ selectedFileName }}
+          </small>
+        </label>
+
+        <div class="form-divider full-width">
+          Or use an existing hosted URL
+        </div>
+
+        <label class="form-field full-width">
+          <span>
+            Content URL
+            <small>
+              Required for Link items if no file is uploaded.
+            </small>
+          </span>
+
+          <input
+            type="url"
+            [(ngModel)]="form.contentUrl"
+            placeholder="https://..."
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Streaming URL</span>
+
+          <input
+            type="url"
+            [(ngModel)]="form.streamingUrl"
+            placeholder="Optional streaming URL"
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Thumbnail URL</span>
+
+          <input
+            type="url"
+            [(ngModel)]="form.thumbnailUrl"
+            placeholder="Optional image URL"
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Tags</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.tags"
+            placeholder="For example: onboarding, hr, policy"
+          />
+        </label>
+
+        <label
+          *ngIf="editingItem"
+          class="form-field"
+        >
+          <span>Status</span>
+
+          <select [(ngModel)]="form.status">
+            <option value="ACTIVE">Active</option>
+            <option value="ARCHIVED">Archived</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button
+          type="button"
+          class="btn btn-outline"
+          [disabled]="saving || uploading"
+          (click)="closeForm()"
+        >
+          Cancel
+        </button>
+
+        <button
+          type="button"
+          class="btn btn-primary"
+          [disabled]="saving || uploading"
+          (click)="saveItem()"
+        >
+          {{
+            uploading
+              ? 'Uploading file…'
+              : saving
+                ? 'Saving…'
+                : editingItem
+                  ? 'Save changes'
+                  : 'Create content'
+          }}
+        </button>
+      </div>
+    </section>
+  </div>
+</div>

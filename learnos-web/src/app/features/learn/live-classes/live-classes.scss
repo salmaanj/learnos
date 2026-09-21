@@ -1,0 +1,263 @@
+.learner-live-classes-page {
+  display: grid;
+  gap: 16px;
+}
+
+.page-header h2 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 21px;
+}
+
+.page-header p {
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.tabs {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 9px;
+  background: #e2e8f0;
+}
+
+.tab-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #475569;
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-button span {
+  display: inline-grid;
+  min-width: 19px;
+  min-height: 19px;
+  place-items: center;
+  border-radius: 999px;
+  background: #cbd5e1;
+  color: #475569;
+  font-size: 9px;
+}
+
+.tab-button.active {
+  background: #ffffff;
+  color: #1d4ed8;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+}
+
+.tab-button.active span {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.state-message,
+.error-message {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 30px 18px;
+  color: #64748b;
+  font-size: 13px;
+  text-align: center;
+}
+
+.error-message {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.live-class-list {
+  display: grid;
+  gap: 11px;
+}
+
+.live-class-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 15px 16px;
+}
+
+.date-card {
+  display: flex;
+  width: 58px;
+  min-width: 58px;
+  min-height: 62px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.date-day {
+  color: #1d4ed8;
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.date-month {
+  margin-top: 4px;
+  color: #2563eb;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+}
+
+.class-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.class-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.class-heading h3 {
+  overflow: hidden;
+  margin: 0;
+  color: #0f172a;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 5px 0 0;
+  color: #64748b;
+  font-size: 11px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.status-badge {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.status-badge.live {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.status-badge.completed {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.status-badge.cancelled {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.class-meta,
+.class-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 13px;
+  margin-top: 10px;
+  color: #64748b;
+  font-size: 10px;
+}
+
+.class-context {
+  margin-top: 6px;
+  color: #475569;
+}
+
+.attendance-text {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.class-action {
+  flex: 0 0 auto;
+}
+
+.empty-state {
+  padding: 48px 18px;
+  text-align: center;
+}
+
+.empty-icon {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+  place-items: center;
+  border-radius: 50%;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 22px;
+}
+
+.empty-state h3 {
+  margin: 0;
+  color: #1e293b;
+  font-size: 15px;
+}
+
+.empty-state p {
+  max-width: 500px;
+  margin: 8px auto 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+@media (max-width: 760px) {
+  .live-class-card {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .date-card {
+    flex-direction: row;
+    gap: 7px;
+    width: 100%;
+    min-height: 39px;
+  }
+
+  .date-month {
+    margin-top: 0;
+  }
+
+  .class-heading {
+    flex-direction: column;
+  }
+
+  .class-heading h3 {
+    white-space: normal;
+  }
+
+  .class-action,
+  .class-action .btn {
+    width: 100%;
+  }
+}

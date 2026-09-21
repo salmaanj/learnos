@@ -1,0 +1,84 @@
+<div class="tutor-live-classes-page">
+  <header class="page-header">
+    <div>
+      <span class="page-kicker">Teaching</span>
+      <h2>My live classes</h2>
+      <p>View your scheduled classes and join when it is time to conduct them.</p>
+    </div>
+
+    <div class="page-actions">
+      <button type="button" class="btn btn-outline" (click)="goToDashboard()">
+        Dashboard
+      </button>
+      <button type="button" class="btn btn-outline" (click)="goToLiveClasses()">
+        Live Classes
+      </button>
+    </div>
+  </header>
+
+  <section *ngIf="!loading && !error && todayClasses.length > 0" class="today-notification">
+    <div class="notification-icon">!</div>
+    <div>
+      <strong>You have Scheduled Live Classes today!</strong>
+      <p>View the Live Classes section to know the details.</p>
+    </div>
+  </section>
+
+  <section *ngIf="!loading && !error" class="summary-card">
+    <strong>
+      {{ classes.length === 0 ? 'You have no upcoming live classes.' : classes.length === 1 ? 'You have 1 upcoming live class.' : 'You have ' + classes.length + ' upcoming live classes.' }}
+    </strong>
+    <span>Your assigned teaching sessions appear below.</span>
+  </section>
+
+  <div *ngIf="loading" class="state-card">Loading your live classes...</div>
+
+  <div *ngIf="!loading && error" class="error-card">
+    <span>{{ error }}</span>
+    <button type="button" class="btn btn-outline" (click)="loadClasses()">Try again</button>
+  </div>
+
+  <div *ngIf="!loading && actionError" class="action-error">{{ actionError }}</div>
+
+  <section *ngIf="!loading && !error && classes.length > 0" class="class-list">
+    <article *ngFor="let item of classes; trackBy: trackById" class="class-card">
+      <div class="date-card">
+        <span class="date-day">{{ item.startAt | date: 'dd' }}</span>
+        <span class="date-month">{{ item.startAt | date: 'MMM' | uppercase }}</span>
+      </div>
+
+      <div class="class-content">
+        <div class="class-heading">
+          <div>
+            <h3>{{ item.title }}</h3>
+            <p *ngIf="item.description">{{ item.description }}</p>
+          </div>
+          <span class="status-badge">{{ item.status }}</span>
+        </div>
+
+        <div class="class-meta">
+          <span>{{ formatDate(item.startAt) }}</span>
+          <span>{{ formatTime(item.startAt) }} – {{ formatTime(item.endAt) }}</span>
+          <span>{{ formatProvider(item.provider) }}</span>
+          <span *ngIf="item.capacity !== null">{{ item.capacity }} seats</span>
+        </div>
+
+        <div class="class-context">
+          <span *ngIf="item.courseTitle">Course: {{ item.courseTitle }}</span>
+          <span>Tutor: {{ item.instructorName || 'You' }}</span>
+        </div>
+      </div>
+
+      <div class="class-action">
+        <button type="button" class="btn btn-primary" [disabled]="joiningId === item.id" (click)="joinClass(item)">
+          {{ joiningId === item.id ? 'Opening…' : 'Join class' }}
+        </button>
+      </div>
+    </article>
+  </section>
+
+  <section *ngIf="!loading && !error && classes.length === 0" class="empty-card">
+    <h3>No upcoming live classes</h3>
+    <p>You currently have no scheduled live classes assigned to you.</p>
+  </section>
+</div>

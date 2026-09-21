@@ -1,0 +1,215 @@
+<div class="analytics-page">
+  <div *ngIf="loading" class="table-state">
+    Loading analytics...
+  </div>
+
+  <div *ngIf="!loading && error" class="table-error">
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading && !error && analytics && summary">
+    <section class="summary-grid">
+      <article class="summary-card summary-companies" *ngIf="isSuperAdmin">
+        <span>Total Companies</span>
+        <strong>{{ summary.totalCompanies | number }}</strong>
+      </article>
+
+      <article class="summary-card summary-learners">
+        <span>Total Learners</span>
+        <strong>{{ summary.totalLearners | number }}</strong>
+      </article>
+
+      <article class="summary-card summary-courses">
+        <span>Total Courses</span>
+        <strong>{{ summary.totalCourses | number }}</strong>
+      </article>
+
+      <article class="summary-card summary-revenue">
+        <span>{{ isSuperAdmin ? 'Subscription Revenue' : 'Course Revenue' }}</span>
+        <strong>
+          {{ formatRevenue(isSuperAdmin ? summary.subscriptionRevenue : summary.courseRevenue) }}
+        </strong>
+      </article>
+    </section>
+
+    <div class="card analytics-card">
+      <div class="analytics-toolbar">
+        <div class="analytics-title">
+          Analytics
+          <span>Management reporting</span>
+        </div>
+
+        <div class="analytics-actions">
+          <select
+            *ngIf="isSuperAdmin"
+            class="company-select"
+            [(ngModel)]="selectedCompanyId"
+            (ngModelChange)="onCompanyChange()"
+          >
+            <option value="">All Companies</option>
+            <option
+              *ngFor="let company of companies; trackBy: trackByCompanyId"
+              [value]="company.companyId"
+            >
+              {{ company.companyName }}
+            </option>
+          </select>
+
+          <button
+            type="button"
+            class="btn btn-outline"
+            (click)="refresh()"
+          >
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      <div class="report-heading">
+        <div>
+          <h2>{{ isSuperAdmin ? 'Company management report' : 'Company report' }}</h2>
+          <p>
+            {{ isSuperAdmin
+              ? 'Learner activity, course performance, and subscription status by company.'
+              : 'Learner activity, course performance, and revenue for your company.' }}
+          </p>
+        </div>
+
+        <div class="payment-summary">
+          <span>Successful</span>
+          <strong>{{ summary.successfulPayments | number }}</strong>
+          <span>Pending {{ summary.pendingPayments | number }}</span>
+          <span>Failed {{ summary.failedPayments | number }}</span>
+        </div>
+      </div>
+
+      <div class="table-wrap" *ngIf="companies.length > 0">
+        <table class="tbl">
+          <thead>
+            <tr>
+              <th class="number-column">#</th>
+              <th>Company</th>
+              <th>Learners</th>
+              <th>Courses</th>
+              <th>Course Revenue</th>
+              <th>Subscription</th>
+              <th>Plan</th>
+              <th>Expiry</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              *ngFor="let company of companies; let index = index; trackBy: trackByCompanyId"
+              class="company-row"
+              [class.selected-row]="company.companyId === selectedCompanyId"
+              (click)="selectCompany(company.companyId)"
+            >
+              <td class="number-column">{{ index + 1 }}</td>
+
+              <td>
+                <div class="company-cell">
+                  <span class="company-avatar">
+                    {{ companyInitials(company.companyName) }}
+                  </span>
+                  <b>{{ company.companyName }}</b>
+                </div>
+              </td>
+
+              <td class="number-value">
+                {{ company.totalLearners | number }}
+              </td>
+
+              <td class="number-value">
+                {{ company.totalCourses | number }}
+              </td>
+
+              <td class="revenue-value">
+                {{ formatRevenue(company.courseRevenue) }}
+              </td>
+
+              <td>
+                <span
+                  class="status-badge"
+                  [ngClass]="statusClass(company.subscriptionStatus)"
+                >
+                  {{ statusLabel(company.subscriptionStatus) }}
+                </span>
+              </td>
+
+              <td>
+                <span class="plan-badge">
+                  {{ company.planName || '—' }}
+                </span>
+              </td>
+
+              <td class="date-value">
+                {{ formatDate(company.expiryDate) }}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div *ngIf="companies.length === 0" class="table-empty">
+        No company analytics data found.
+      </div>
+
+      <div
+        *ngIf="selectedCompany"
+        class="nested-panel"
+      >
+        <div class="nested-head">
+          <div class="company-detail-heading">
+            <span class="company-avatar large-avatar">
+              {{ companyInitials(selectedCompany.companyName) }}
+            </span>
+            <div>
+              <strong>{{ selectedCompany.companyName }}</strong>
+              <span>Selected company details</span>
+            </div>
+          </div>
+
+          <span
+            class="status-badge"
+            [ngClass]="statusClass(selectedCompany.subscriptionStatus)"
+          >
+            {{ statusLabel(selectedCompany.subscriptionStatus) }}
+          </span>
+        </div>
+
+        <div class="detail-grid">
+          <div>
+            <span>Plan</span>
+            <strong>{{ selectedCompany.planName || '—' }}</strong>
+          </div>
+
+          <div>
+            <span>Expiry date</span>
+            <strong>{{ formatDate(selectedCompany.expiryDate) }}</strong>
+          </div>
+
+          <div>
+            <span>Learners</span>
+            <strong>{{ selectedCompany.totalLearners | number }}</strong>
+          </div>
+
+          <div>
+            <span>Courses</span>
+            <strong>{{ selectedCompany.totalCourses | number }}</strong>
+          </div>
+
+          <div>
+            <span>Course revenue</span>
+            <strong>{{ formatRevenue(selectedCompany.courseRevenue) }}</strong>
+          </div>
+
+          <div>
+            <span>Successful payments</span>
+            <strong>{{ selectedCompany.successfulPaymentCount | number }}</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+</div>

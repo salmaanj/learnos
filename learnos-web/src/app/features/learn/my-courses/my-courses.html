@@ -1,0 +1,34 @@
+<div class="page">
+  <div class="sec-hd">
+    <span class="sec-title">My Courses</span>
+  </div>
+
+  <div *ngIf="loading" class="state-message">Loading your courses…</div>
+  <div *ngIf="!loading && errorMessage" class="state-message error">{{ errorMessage }}</div>
+  <div *ngIf="!loading && !errorMessage && courses.length === 0" class="state-message">
+    You haven't enrolled in any courses yet. Head to "Browse Courses" to get started.
+  </div>
+
+  <div class="grid" *ngIf="!loading && !errorMessage && courses.length > 0">
+    <div class="card course-card" *ngFor="let course of courses">
+      <div class="course-thumb">
+        <img *ngIf="course.thumbnailUrl" [src]="course.thumbnailUrl" [alt]="course.title" />
+        <div class="course-thumb-fallback" *ngIf="!course.thumbnailUrl">
+          {{ course.title.charAt(0).toUpperCase() }}
+        </div>
+      </div>
+      <div class="course-title">
+        <a [routerLink]="['/learn/courses', course.id]">{{ course.title }}</a>
+      </div>
+      <div class="course-desc" *ngIf="course.shortDescription">{{ course.shortDescription }}</div>
+      <div class="course-meta">{{ course.totalLessons }} lessons</div>
+
+      <div class="prog">
+        <div class="prog-fill" [style.width.%]="course.progressPercent" style="background: var(--gr)"></div>
+      </div>
+      <div class="prog-label">{{ course.progressPercent }}% complete</div>
+
+      <a class="btn btn-outline" [routerLink]="['/learn/courses', course.id]">Continue Learning</a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,329 @@
+<div
+  class="card courses-card"
+>
+  <div class="courses-toolbar">
+    <div class="courses-title">
+      Courses
+      <span>
+        ({{ displayedCourses.length }})
+      </span>
+    </div>
+
+    <input
+      #courseSearch
+      type="search"
+      placeholder="Search courses..."
+      [value]="searchTerm"
+      (input)="searchTerm = courseSearch.value; onSearchChange()"
+      class="course-search"
+    />
+  </div>
+
+  <div *ngIf="loading" class="table-state">
+    Loading courses...
+  </div>
+
+  <div *ngIf="!loading && error" class="table-error">
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+    <table class="tbl" *ngIf="displayedCourses.length > 0">
+      <thead>
+        <tr>
+          <th class="number-column">#</th>
+
+          <th
+            class="sortable-column"
+            (click)="sortBy('title')"
+          >
+            Course
+            <span>{{ sortIndicator('title') }}</span>
+          </th>
+
+          <th
+            class="sortable-column"
+            (click)="sortBy('category')"
+          >
+            Category
+            <span>{{ sortIndicator('category') }}</span>
+          </th>
+
+          <th
+            class="sortable-column"
+            (click)="sortBy('enrolledCount')"
+          >
+            Enrolled
+            <span>{{ sortIndicator('enrolledCount') }}</span>
+          </th>
+
+          <th
+            class="sortable-column"
+            (click)="sortBy('completionRate')"
+          >
+            Completion
+            <span>{{ sortIndicator('completionRate') }}</span>
+          </th>
+
+          <th
+            class="sortable-column"
+            (click)="sortBy('rating')"
+          >
+            Rating
+            <span>{{ sortIndicator('rating') }}</span>
+          </th>
+
+          <th
+            class="sortable-column"
+            (click)="sortBy('status')"
+          >
+            Status
+            <span>{{ sortIndicator('status') }}</span>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <ng-container
+          *ngFor="
+            let course of displayedCourses;
+            let courseIndex = index;
+            trackBy: trackByCourseId
+          "
+        >
+          <tr
+            class="course-row"
+            (click)="toggleCourse(course)"
+          >
+            <td class="number-column">
+              {{ courseIndex + 1 }}
+            </td>
+
+            <td>
+              <b>{{ course.title }}</b>
+            </td>
+
+            <td>
+              <span
+                class="category-badge"
+                [ngClass]="{
+                  'category-it': courseIndex % 6 === 0,
+                  'category-finance': courseIndex % 6 === 1,
+                  'category-soft-skills': courseIndex % 6 === 2,
+                  'category-hr': courseIndex % 6 === 3,
+                  'category-healthcare': courseIndex % 6 === 4,
+                  'category-default': courseIndex % 6 === 5
+                }"
+              >
+                {{ course.category || 'Uncategorised' }}
+              </span>
+            </td>
+
+            <td class="enrollment-count">
+              {{ course.enrolledCount }}
+            </td>
+
+            <td>
+              <div class="completion-cell">
+                <div class="prog course-progress">
+                  <div
+                    class="prog-fill"
+                    [style.width.%]="course.completionRate"
+                    [ngClass]="{
+                      'progress-live': course.status === 'Live',
+                      'progress-it': course.status !== 'Live' && courseIndex % 6 === 0,
+                      'progress-finance': course.status !== 'Live' && courseIndex % 6 === 1,
+                      'progress-soft-skills': course.status !== 'Live' && courseIndex % 6 === 2,
+                      'progress-hr': course.status !== 'Live' && courseIndex % 6 === 3,
+                      'progress-healthcare': course.status !== 'Live' && courseIndex % 6 === 4,
+                      'progress-default': course.status !== 'Live' && courseIndex % 6 === 5
+                    }"
+                  ></div>
+                </div>
+
+                <span>
+                  {{ course.completionRate }}%
+                </span>
+              </div>
+            </td>
+
+            <td>
+              <div class="rating-cell">
+                <span>⭐</span>
+                <span>
+                  {{ course.rating > 0 ? course.rating.toFixed(1) : '—' }}
+                </span>
+              </div>
+            </td>
+
+            <td>
+              <span
+                class="status-badge"
+                [ngClass]="{
+                  'status-published': course.status === 'Published',
+                  'status-live': course.status === 'Live',
+                  'status-draft': course.status !== 'Published' && course.status !== 'Live'
+                }"
+              >
+                {{ course.status }}
+              </span>
+            </td>
+          </tr>
+
+          <tr *ngIf="course.expanded" class="expanded-row">
+            <td colspan="7">
+              <div class="nested-panel">
+                <div class="nested-head">
+                  <strong>Modules</strong>
+
+                  <div class="nested-actions">
+                    <a
+                      class="btn btn-enrollments"
+                      [routerLink]="[
+                        '/admin/courses',
+                        course.id,
+                        'enrollments'
+                      ]"
+                      (click)="$event.stopPropagation()"
+                    >
+                      Manage Enrollments
+                    </a>
+
+                    <button
+                      class="btn btn-preview"
+                      (click)="previewCourse(course); $event.stopPropagation()"
+                    >
+                      ▶ Preview Course
+                    </button>
+
+                    <a
+                      class="btn btn-primary"
+                      [routerLink]="['/admin/courses', course.id, 'content']"
+                      (click)="$event.stopPropagation()"
+                    >
+                      Manage Content
+                    </a>
+
+                    <button
+                      class="btn btn-outline"
+                      (click)="editCourse(course); $event.stopPropagation()"
+                    >
+                      Edit Course
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  class="preview-helper"
+                  [class.draft-preview]="course.status === 'Draft'"
+                >
+                  <span *ngIf="course.status === 'Draft'">
+                    Draft preview — learners cannot see this course until it is published.
+                  </span>
+
+                  <span *ngIf="course.status !== 'Draft'">
+                    Preview mode opens the learner view without saving enrollment or progress.
+                  </span>
+                </div>
+
+                <div
+                  *ngIf="!course.modules || course.modules.length === 0"
+                  class="state-msg"
+                >
+                  No modules found
+                </div>
+
+                <div
+                  *ngFor="
+                    let module of course.modules;
+                    let moduleIndex = index;
+                    trackBy: trackByModuleId
+                  "
+                  class="module-box"
+                >
+                  <div
+                    class="module-row"
+                    (click)="toggleModule(course, module); $event.stopPropagation()"
+                  >
+                    <div class="module-main">
+                      <span class="module-number">
+                        {{ moduleIndex + 1 }}
+                      </span>
+
+                      <div>
+                        <strong>{{ module.title }}</strong>
+
+                        <div class="muted">
+                          {{ module.description || 'No description' }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="muted">
+                      Order: {{ module.displayOrder }}
+                    </div>
+                  </div>
+
+                  <div *ngIf="module.expanded" class="lesson-box">
+                    <div class="lesson-head">
+                      <strong>Lessons</strong>
+                    </div>
+
+                    <div
+                      *ngIf="!module.lessons || module.lessons.length === 0"
+                      class="state-msg"
+                    >
+                      No lessons found
+                    </div>
+
+                    <div
+                      *ngFor="
+                        let lesson of module.lessons;
+                        let lessonIndex = index;
+                        trackBy: trackByLessonId
+                      "
+                      class="lesson-item"
+                    >
+                      <div class="module-main">
+                        <span class="module-number">
+                          {{ lessonIndex + 1 }}
+                        </span>
+
+                        <div>
+                          <strong>{{ lesson.title }}</strong>
+
+                          <div class="muted">
+                            {{ lesson.description || 'No description' }}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="muted">
+                        {{ lesson.type }} ·
+                        {{ lesson.isPublished ? 'Published' : 'Draft' }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+
+    <div
+      *ngIf="courses.length > 0 && displayedCourses.length === 0"
+      class="table-empty"
+    >
+      No courses match your search.
+    </div>
+
+    <div
+      *ngIf="courses.length === 0"
+      class="table-empty"
+    >
+      No courses found.
+    </div>
+  </ng-container>
+</div>

@@ -1,0 +1,299 @@
+<div class="subscription-page">
+  <div
+    *ngIf="errorMessage && !subscription"
+    class="error-banner"
+  >
+    {{ errorMessage }}
+  </div>
+
+  <div
+    *ngIf="paymentError"
+    class="error-banner"
+  >
+    {{ paymentError }}
+  </div>
+
+  <div
+    *ngIf="loading"
+    class="loading-card"
+  >
+    Loading subscription details...
+  </div>
+
+  <ng-container
+    *ngIf="!loading && subscription"
+  >
+    <section
+      class="notice-card"
+      [class.notice-pending]="isPendingPayment"
+      [class.notice-active]="isActive"
+    >
+      <div>
+        <h2>
+          {{ pageHeading }}
+        </h2>
+
+        <p>
+          {{ pageDescription }}
+        </p>
+      </div>
+
+      <span class="status-badge">
+        {{ subscription.status }}
+      </span>
+    </section>
+
+    <section
+      *ngIf="hasSelectedPlan"
+      class="card current-plan-card"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">
+            Current subscription
+          </p>
+
+          <h2>
+            {{ subscription.planName }}
+          </h2>
+        </div>
+
+        <span class="plan-code">
+          {{ subscription.planCode }}
+        </span>
+      </div>
+
+      <div class="details-grid">
+        <div class="detail">
+          <span class="detail-label">Amount</span>
+          <span class="detail-value">
+            {{ formatAmount(subscription.amount, subscription.currency) }}
+          </span>
+        </div>
+
+        <div class="detail">
+          <span class="detail-label">Payment method</span>
+          <span class="detail-value">
+            {{ subscription.paymentMethod || 'Not set' }}
+          </span>
+        </div>
+
+        <div class="detail">
+          <span class="detail-label">Duration</span>
+          <span class="detail-value">
+            {{
+              subscription.durationMonths
+                ? subscription.durationMonths + ' months'
+                : 'Not available'
+            }}
+          </span>
+        </div>
+
+        <div class="detail">
+          <span class="detail-label">Start date</span>
+          <span class="detail-value">
+            {{ subscription.startDate || 'Not set' }}
+          </span>
+        </div>
+
+        <div class="detail">
+          <span class="detail-label">Expiry date</span>
+          <span class="detail-value">
+            {{ subscription.expiryDate || 'Not set' }}
+          </span>
+        </div>
+
+        <div class="detail">
+          <span class="detail-label">Maximum learners</span>
+          <span class="detail-value">
+            {{ subscription.maxLearners ?? 'Not specified' }}
+          </span>
+        </div>
+
+        <div class="detail">
+          <span class="detail-label">Maximum courses</span>
+          <span class="detail-value">
+            {{ subscription.maxCourses ?? 'Not specified' }}
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section
+      *ngIf="!hasSelectedPlan"
+      class="card choose-plan-card"
+    >
+      <p class="eyebrow">Plans</p>
+
+      <h2>Select a plan</h2>
+
+      <p>
+        Your company is pending payment and does not have a plan selected yet.
+      </p>
+    </section>
+
+    <section
+      *ngIf="isPendingPayment || !hasSelectedPlan"
+      class="upgrade-section"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Available plans</p>
+
+          <h2>Choose your plan</h2>
+
+          <p class="section-description">
+            Select a plan and complete the online payment to activate Admin features.
+          </p>
+        </div>
+      </div>
+
+      <div
+        *ngIf="plansLoading"
+        class="loading-card"
+      >
+        Loading available plans...
+      </div>
+
+      <div
+        *ngIf="plansError"
+        class="error-banner"
+      >
+        {{ plansError }}
+      </div>
+
+      <div
+        *ngIf="!plansLoading && !plansError && !hasUpgradeOptions"
+        class="empty-card"
+      >
+        No active plans are currently available.
+      </div>
+
+      <div
+        *ngIf="!plansLoading && hasUpgradeOptions"
+        class="plans-grid"
+      >
+        <article
+          *ngFor="let plan of upgradePlans; trackBy: trackPlan"
+          class="plan-card"
+        >
+          <div class="plan-card-header">
+            <h3>{{ plan.name }}</h3>
+            <span>{{ plan.code }}</span>
+          </div>
+
+          <div class="plan-price">
+            {{ formatAmount(plan.price, plan.currency) }}
+          </div>
+
+          <p
+            *ngIf="plan.durationMonths"
+            class="plan-duration"
+          >
+            {{ plan.durationMonths }} months
+          </p>
+
+          <p
+            *ngIf="plan.description"
+            class="plan-description"
+          >
+            {{ plan.description }}
+          </p>
+
+          <div class="upgrade-amount">
+            <span>Payable subscription amount</span>
+            <strong>{{ formatPayableAmount(plan) }}</strong>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-payment"
+            [disabled]="paymentLoading"
+            (click)="payForPlan(plan)"
+          >
+            {{
+              isPlanPaymentLoading(plan)
+                ? 'Processing...'
+                : 'Pay and activate plan'
+            }}
+          </button>
+        </article>
+      </div>
+    </section>
+
+    <section
+      *ngIf="isActive"
+      class="upgrade-section"
+    >
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">Upgrade</p>
+
+          <h2>Upgrade your plan</h2>
+
+          <p class="section-description">
+            Only higher-priced plans are shown. Downgrades are not available.
+          </p>
+        </div>
+      </div>
+
+      <div
+        *ngIf="!plansLoading && !hasUpgradeOptions"
+        class="empty-card"
+      >
+        You are currently on the highest available plan.
+      </div>
+
+      <div
+        *ngIf="!plansLoading && hasUpgradeOptions"
+        class="plans-grid"
+      >
+        <article
+          *ngFor="let plan of upgradePlans; trackBy: trackPlan"
+          class="plan-card"
+        >
+          <div class="plan-card-header">
+            <h3>{{ plan.name }}</h3>
+            <span>{{ plan.code }}</span>
+          </div>
+
+          <div class="plan-price">
+            {{ formatAmount(plan.price, plan.currency) }}
+          </div>
+
+          <p
+            *ngIf="plan.durationMonths"
+            class="plan-duration"
+          >
+            {{ plan.durationMonths }} months
+          </p>
+
+          <p
+            *ngIf="plan.description"
+            class="plan-description"
+          >
+            {{ plan.description }}
+          </p>
+
+          <div class="upgrade-amount">
+            <span>Payable upgrade difference</span>
+            <strong>{{ formatPayableAmount(plan) }}</strong>
+          </div>
+
+          <button
+            type="button"
+            class="btn btn-payment"
+            [disabled]="paymentLoading"
+            (click)="payForPlan(plan)"
+          >
+            {{
+              isPlanPaymentLoading(plan)
+                ? 'Processing...'
+                : 'Pay upgrade difference'
+            }}
+          </button>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</div>

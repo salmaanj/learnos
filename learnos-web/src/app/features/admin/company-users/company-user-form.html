@@ -1,0 +1,137 @@
+<div class="card form-card">
+  <div class="sec-hd">
+    <span class="sec-title">
+      {{
+        restrictToLearnerOnly
+          ? (isEdit ? 'Edit Learner' : 'Create Learner')
+          : (isEdit ? 'Edit User' : 'Create User')
+      }}
+    </span>
+  </div>
+
+  <form [formGroup]="userForm" (ngSubmit)="saveUser()" autocomplete="off">
+    <div class="grid">
+      <label>
+        First Name
+        <input type="text" formControlName="firstName" autocomplete="off" />
+      </label>
+
+      <label>
+        Last Name
+        <input type="text" formControlName="lastName" autocomplete="off" />
+      </label>
+
+      <label>
+        Email
+        <input type="email" formControlName="email" autocomplete="off" />
+      </label>
+
+      <label>
+        Password
+        <div class="password-input-row">
+          <input
+            [type]="showPassword ? 'text' : 'password'"
+            formControlName="password"
+            autocomplete="new-password"
+            [placeholder]="isEdit ? 'Leave blank to keep current password' : ''"
+          />
+          <button
+            type="button"
+            class="show-toggle"
+            (click)="togglePasswordVisibility()">
+            {{ showPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+      </label>
+
+      <label>
+        Confirm Password
+        <div class="password-input-row">
+          <input
+            [type]="showConfirmPassword ? 'text' : 'password'"
+            formControlName="confirmPassword"
+            autocomplete="new-password"
+            [placeholder]="isEdit ? 'Leave blank to keep current password' : ''"
+          />
+          <button
+            type="button"
+            class="show-toggle"
+            (click)="toggleConfirmPasswordVisibility()">
+            {{ showConfirmPassword ? 'Hide' : 'Show' }}
+          </button>
+        </div>
+
+        <small
+          class="error-text"
+          *ngIf="userForm.errors?.['passwordMismatch'] && userForm.get('confirmPassword')?.touched">
+          Passwords do not match
+        </small>
+      </label>
+
+      <label>
+        Phone
+        <input type="text" formControlName="phone" autocomplete="off" />
+      </label>
+
+      <label>
+        Role
+        <select formControlName="role" [disabled]="restrictToLearnerOnly">
+          <option value="LEARNER">Learner</option>
+          <option value="USER" *ngIf="!restrictToLearnerOnly">
+            User (can manage content + learners)
+          </option>
+          <option value="TUTOR" *ngIf="!restrictToLearnerOnly">
+            Tutor (courses/modules/lessons only)
+          </option>
+          <option value="ADMIN" *ngIf="!restrictToLearnerOnly">
+            Admin
+          </option>
+        </select>
+
+        <small *ngIf="restrictToLearnerOnly" class="hint">
+          This will always create a Learner account.
+        </small>
+      </label>
+
+      <label>
+        Company
+        <select formControlName="companyId">
+          <option value="">Select company</option>
+          <option *ngFor="let company of companies" [value]="company.id">
+            {{ company.name }}
+          </option>
+        </select>
+      </label>
+
+      <label>
+        Status
+        <select formControlName="status">
+          <option value="Active">Active</option>
+          <option value="Pending">Pending</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="actions">
+      <button type="submit" class="btn btn-primary" [disabled]="loading">
+        {{
+          loading
+            ? 'Saving...'
+            : (
+                restrictToLearnerOnly
+                  ? (isEdit ? 'Update Learner' : 'Save Learner')
+                  : (isEdit ? 'Update User' : 'Save User')
+              )
+        }}
+      </button>
+
+      <button class="btn cancel" type="button" (click)="cancel()">
+        Cancel
+      </button>
+    </div>
+
+    <div *ngIf="success" class="success-msg">{{ success }}</div>
+    <div *ngIf="error" class="error-msg">{{ error }}</div>
+  </form>
+</div>

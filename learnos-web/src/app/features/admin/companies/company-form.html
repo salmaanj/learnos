@@ -1,0 +1,413 @@
+<div class="card form-card">
+  <h2>
+    {{ isEdit ? 'Edit Company' : 'Create Company' }}
+  </h2>
+
+  <div
+    *ngIf="saveError"
+    class="error-banner"
+  >
+    {{ saveError }}
+  </div>
+
+  <div
+    *ngIf="!isEdit"
+    class="info-banner"
+  >
+    Select Pending Payment to create the
+    company without assigning a plan. The
+    Company Admin will choose a plan from the
+    Subscription page.
+  </div>
+
+  <div
+    *ngIf="isCompanyAdminEdit"
+    class="info-banner"
+  >
+    Plan and subscription dates are managed
+    from Payments → Subscription.
+  </div>
+
+  <form
+    [formGroup]="companyForm"
+    (ngSubmit)="save()"
+  >
+    <div class="form-grid">
+      <div class="field">
+        <label>Name</label>
+
+        <input
+          class="input"
+          placeholder="Enter company name"
+          formControlName="name"
+        />
+      </div>
+
+      <div class="field">
+        <label>Industry</label>
+
+        <input
+          class="input"
+          placeholder="Example: IT Services, Healthcare, Education"
+          formControlName="industry"
+        />
+      </div>
+
+      <div class="field">
+        <label>Company Code</label>
+
+        <input
+          class="input"
+          placeholder="Example: BLUTE001"
+          formControlName="companyCode"
+        />
+
+        <small
+          *ngIf="isCompanyAdminEdit"
+          class="readonly-note"
+        >
+          Managed by Super Admin.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Email</label>
+
+        <input
+          class="input"
+          type="email"
+          placeholder="Enter company email"
+          formControlName="email"
+        />
+      </div>
+
+      <div class="field">
+        <label>Phone</label>
+
+        <input
+          class="input"
+          placeholder="Enter contact number"
+          formControlName="phone"
+        />
+      </div>
+
+      <div class="field">
+        <label>Domain</label>
+
+        <input
+          class="input"
+          placeholder="Example: company.com"
+          formControlName="domain"
+        />
+      </div>
+
+      <div class="field field-wide">
+        <label>Address</label>
+
+        <textarea
+          class="input address-input"
+          rows="2"
+          placeholder="Enter registered office address"
+          formControlName="address"
+        ></textarea>
+      </div>
+
+      <div class="field">
+        <label>City</label>
+
+        <input
+          class="input"
+          placeholder="Enter city"
+          formControlName="city"
+        />
+      </div>
+
+      <div class="field">
+        <label>State</label>
+
+        <input
+          class="input"
+          placeholder="Enter state"
+          formControlName="state"
+        />
+      </div>
+
+      <div class="field">
+        <label>PIN Code</label>
+
+        <input
+          class="input"
+          placeholder="Enter PIN code"
+          formControlName="pinCode"
+        />
+      </div>
+
+      <div class="field">
+        <label>Country</label>
+
+        <input
+          class="input"
+          placeholder="Enter country"
+          formControlName="country"
+        />
+      </div>
+
+      <div class="field">
+        <label>GST No.</label>
+
+        <input
+          class="input"
+          maxlength="15"
+          placeholder="Example: 27ABCDE1234F1Z5"
+          formControlName="gstNumber"
+          (input)="onTaxInput('gstNumber')"
+        />
+
+        <small
+          class="field-error"
+          *ngIf="
+            companyForm.get('gstNumber')?.touched &&
+            companyForm.get('gstNumber')?.invalid
+          "
+        >
+          Enter a valid 15-character GST number.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>PAN No.</label>
+
+        <input
+          class="input"
+          maxlength="10"
+          placeholder="Example: ABCDE1234F"
+          formControlName="panNumber"
+          (input)="onTaxInput('panNumber')"
+        />
+
+        <small
+          class="field-error"
+          *ngIf="
+            companyForm.get('panNumber')?.touched &&
+            companyForm.get('panNumber')?.invalid
+          "
+        >
+          Enter a valid 10-character PAN number.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Plan</label>
+
+        <select
+          class="input"
+          formControlName="planCode"
+        >
+          <option value="">
+            Select later after payment
+          </option>
+
+          <option
+            *ngFor="let plan of plans"
+            [value]="plan.code"
+          >
+            {{ formatPlanLabel(plan) }}
+          </option>
+        </select>
+
+        <small
+          *ngIf="!isEdit"
+          class="readonly-note"
+        >
+          Optional when Status is Pending Payment.
+        </small>
+
+        <small
+          *ngIf="isCompanyAdminEdit"
+          class="readonly-note"
+        >
+          Plan changes are available through
+          Payments → Subscription.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Plan Start Date</label>
+
+        <input
+          class="input"
+          type="date"
+          formControlName="planStartDate"
+        />
+
+        <small
+          *ngIf="isCompanyAdminEdit"
+          class="readonly-note"
+        >
+          Managed by subscription.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Plan Expiry Date</label>
+
+        <input
+          class="input"
+          type="date"
+          formControlName="planExpiryDate"
+        />
+
+        <small
+          *ngIf="isCompanyAdminEdit"
+          class="readonly-note"
+        >
+          Managed by subscription.
+        </small>
+      </div>
+
+      <div class="field">
+        <label>Status</label>
+
+        <select
+          class="input"
+          formControlName="status"
+        >
+          <option value="PENDING_PAYMENT">
+            Pending Payment
+          </option>
+
+          <option value="ACTIVE">
+            Active
+          </option>
+
+          <option value="INACTIVE">
+            Inactive
+          </option>
+
+          <option value="SUSPENDED">
+            Suspended
+          </option>
+        </select>
+
+        <small
+          *ngIf="isCompanyAdminEdit"
+          class="readonly-note"
+        >
+          Managed by Super Admin or payment verification.
+        </small>
+      </div>
+
+      <div
+        *ngIf="plansError"
+        class="field-wide plans-error"
+      >
+        {{ plansError }}
+      </div>
+
+      <div class="field field-wide logo-field">
+        <label>Company Logo</label>
+
+        <div class="logo-upload-row">
+          <div class="logo-preview">
+            <img
+              *ngIf="logoPreview"
+              [src]="logoPreview"
+              alt="Company logo preview"
+            />
+
+            <span *ngIf="!logoPreview">
+              Logo
+            </span>
+          </div>
+
+          <div class="logo-upload-control">
+            <input
+              class="input"
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              (change)="onLogoSelected($event)"
+            />
+
+            <small>
+              PNG, JPG, WebP, or SVG.
+              Maximum file size: 5 MB.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Primary Colour</label>
+
+        <div class="color-input-row">
+          <input
+            class="color-picker"
+            type="color"
+            formControlName="primaryColor"
+          />
+
+          <input
+            class="input color-code"
+            placeholder="#1E3A8A"
+            formControlName="primaryColor"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Secondary Colour</label>
+
+        <div class="color-input-row">
+          <input
+            class="color-picker"
+            type="color"
+            formControlName="secondaryColor"
+          />
+
+          <input
+            class="input color-code"
+            placeholder="#F97316"
+            formControlName="secondaryColor"
+          />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Accent Colour</label>
+
+        <div class="color-input-row">
+          <input
+            class="color-picker"
+            type="color"
+            formControlName="accentColor"
+          />
+
+          <input
+            class="input color-code"
+            placeholder="#2563EB"
+            formControlName="accentColor"
+          />
+        </div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button
+        class="btn btn-primary"
+        type="submit"
+        [disabled]="companyForm.invalid || isSaving"
+      >
+        {{ isSaving ? 'Saving...' : 'Save' }}
+      </button>
+
+      <button
+        class="btn cancel"
+        type="button"
+        (click)="cancel()"
+        [disabled]="isSaving"
+      >
+        Cancel
+      </button>
+    </div>
+  </form>
+</div>

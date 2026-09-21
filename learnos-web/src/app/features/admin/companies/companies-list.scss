@@ -1,0 +1,320 @@
+:host {
+  display: block;
+}
+
+.page {
+  width: 100%;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.company-card {
+  min-width: 0;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.06);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.company-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 9px 22px rgba(15, 23, 42, 0.1);
+}
+
+.company-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  min-width: 0;
+}
+
+.company-details {
+  min-width: 0;
+  flex: 1;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  overflow: hidden;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.company-logo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: #ffffff;
+  object-fit: contain;
+}
+
+.company-details h3 {
+  margin: 1px 0 3px;
+  overflow: hidden;
+  color: #172033;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-details p {
+  margin: 0;
+  overflow: hidden;
+  color: #718096;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-code {
+  display: inline-block;
+  max-width: 100%;
+  margin-top: 6px;
+  overflow: hidden;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 17px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.metric {
+  min-width: 0;
+}
+
+.metric strong {
+  display: block;
+  overflow: hidden;
+  color: #1a2538;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.metric span {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  color: #8a99ad;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 15px;
+  color: #8a99ad;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.status {
+  flex: 0 0 auto;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.badge-success {
+  background: #e3f5df;
+  color: #39722f;
+}
+
+.badge-warning {
+  background: #fff1c7;
+  color: #9a6714;
+}
+
+.badge-danger {
+  background: #fee3e2;
+  color: #a9403c;
+}
+
+.company-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.company-actions a {
+  color: #2563eb;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.company-actions a:hover {
+  text-decoration: underline;
+}
+
+.brand-0 {
+  border-color: #cfe0ff;
+  background: #f5f9ff;
+}
+
+.brand-0 .avatar {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+.brand-0 .company-details h3 {
+  color: #2563eb;
+}
+
+.brand-0 .company-code {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.brand-0 .company-actions a {
+  color: #2563eb;
+}
+
+.brand-0 .company-actions a:hover {
+  color: #1d4ed8;
+}
+
+.brand-1 {
+  border-color: #ccefd7;
+  background: #f5fff8;
+}
+
+.brand-1 .avatar {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.brand-1 .company-details h3 {
+  color: #15803d;
+}
+
+.brand-1 .company-code {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.brand-1 .company-actions a {
+  color: #15803d;
+}
+
+.brand-1 .company-actions a:hover {
+  color: #166534;
+}
+
+.brand-2 {
+  border-color: #fde1c4;
+  background: #fff9f3;
+}
+
+.brand-2 .avatar {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.brand-2 .company-details h3 {
+  color: #c2410c;
+}
+
+.brand-2 .company-code {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
+.brand-2 .company-actions a {
+  color: #c2410c;
+}
+
+.brand-2 .company-actions a:hover {
+  color: #9a3412;
+}
+
+.brand-3 {
+  border-color: #e4dcff;
+  background: #faf7ff;
+}
+
+.brand-3 .avatar {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.brand-3 .company-details h3 {
+  color: #7c3aed;
+}
+
+.brand-3 .company-code {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+.brand-3 .company-actions a {
+  color: #7c3aed;
+}
+
+.brand-3 .company-actions a:hover {
+  color: #6d28d9;
+}
+
+.empty-state {
+  padding: 32px 16px;
+  color: #718096;
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 680px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

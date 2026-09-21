@@ -1,0 +1,354 @@
+<section class="certifications-page">
+  <div *ngIf="loading" class="state-card">
+    Loading certificate records...
+  </div>
+
+  <div *ngIf="!loading && error" class="state-card error-card">
+    <p>{{ error }}</p>
+    <button class="btn btn-outline" type="button" (click)="loadCertificates()">
+      Try again
+    </button>
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+    <section class="summary-grid">
+      <article class="summary-card summary-total">
+        <span>Total certificates</span>
+        <strong>{{ certificates.length }}</strong>
+        <small>All certificate records</small>
+      </article>
+
+      <article class="summary-card summary-issued">
+        <span>Issued certificates</span>
+        <strong>{{ issuedCount }}</strong>
+        <small>Available for download</small>
+      </article>
+
+      <article class="summary-card summary-today">
+        <span>Issued today</span>
+        <strong>{{ todayCertificates.length }}</strong>
+        <small>Live database data</small>
+      </article>
+
+      <article class="summary-card summary-revoked">
+        <span>Revoked certificates</span>
+        <strong>{{ revokedCount }}</strong>
+        <small>Download disabled</small>
+      </article>
+    </section>
+
+    <section class="certificate-preview" *ngIf="selectedCertificate as certificate">
+      <div class="preview-ribbon">
+        <span>Certificate of Completion</span>
+        <span
+          class="status-pill"
+          [ngClass]="statusClass(certificate.status)"
+        >
+          {{ statusLabel(certificate.status) }}
+        </span>
+      </div>
+
+      <div class="preview-content">
+        <div class="preview-main">
+          <p class="preview-kicker">This certifies that</p>
+          <h2>{{ certificate.learnerName }}</h2>
+          <p class="preview-copy">has successfully completed</p>
+          <h3>{{ certificate.courseTitle }}</h3>
+
+          <p class="preview-company" *ngIf="certificate.companyName">
+            Issued by {{ certificate.companyName }} · LearnOS
+          </p>
+        </div>
+
+        <div class="preview-details">
+          <div>
+            <span>Assessment score</span>
+            <strong>
+              {{
+                certificate.quizScorePercent !== null
+                  ? certificate.quizScorePercent + '%'
+                  : 'Passed'
+              }}
+            </strong>
+          </div>
+
+          <div>
+            <span>Issued</span>
+            <strong>{{ formatDate(certificate.issuedAt) }}</strong>
+          </div>
+
+          <div>
+            <span>Verification code</span>
+            <strong>{{ certificate.verificationCode || '—' }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="preview-actions">
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="!isIssued(certificate) || isDownloading(certificate)"
+          (click)="downloadPdf(certificate)"
+        >
+          {{
+            isDownloading(certificate)
+              ? 'Preparing PDF...'
+              : 'Download PDF'
+          }}
+        </button>
+
+        <button
+          class="btn btn-outline"
+          type="button"
+          [disabled]="!certificate.verificationCode"
+          (click)="copyCode(certificate.verificationCode)"
+        >
+          Copy verification code
+        </button>
+
+        <button
+          *ngIf="isIssued(certificate)"
+          class="btn btn-danger"
+          type="button"
+          [disabled]="isRevoking(certificate)"
+          (click)="revokeCertificate(certificate)"
+        >
+          {{
+            isRevoking(certificate)
+              ? 'Revoking...'
+              : 'Revoke certificate'
+          }}
+        </button>
+      </div>
+
+      <p
+        *ngIf="!isIssued(certificate) && certificate.revocationReason"
+        class="revocation-note"
+      >
+        Revocation reason: {{ certificate.revocationReason }}
+      </p>
+    </section>
+
+    <section class="tools-grid">
+      <article class="tool-card">
+        <div class="tool-heading">
+          <div>
+            <p class="tool-kicker">Verification</p>
+            <h2>Verify certificate</h2>
+          </div>
+        </div>
+
+        <div class="verify-form">
+          <input
+            type="text"
+            [(ngModel)]="verificationCode"
+            placeholder="Enter verification code"
+            (keyup.enter)="verifyCertificate()"
+          />
+
+          <button
+            class="btn btn-primary"
+            type="button"
+            [disabled]="verificationLoading || !verificationCode.trim()"
+            (click)="verifyCertificate()"
+          >
+            {{ verificationLoading ? 'Checking...' : 'Verify' }}
+          </button>
+        </div>
+
+        <div *ngIf="verificationError" class="verify-message invalid">
+          {{ verificationError }}
+        </div>
+
+        <div
+          *ngIf="verificationResult"
+          class="verify-result"
+          [class.valid]="verificationResult.valid"
+          [class.invalid]="!verificationResult.valid"
+        >
+          <div class="verify-result-header">
+            <strong>
+              {{
+                verificationResult.valid
+                  ? 'Certificate is valid'
+                  : 'Certificate is not valid'
+              }}
+            </strong>
+
+            <button
+              class="clear-link"
+              type="button"
+              (click)="clearVerification()"
+            >
+              Clear
+            </button>
+          </div>
+
+          
+          <div *ngIf="verificationResult.certificateNumber" class="verify-data">
+            <span>{{ verificationResult.learnerName }}</span>
+            <span>{{ verificationResult.courseTitle }}</span>
+            <span>{{ verificationResult.certificateNumber }}</span>
+          </div>
+        </div>
+      </article>
+
+      <article class="tool-card">
+        <div class="tool-heading">
+          <div>
+            <p class="tool-kicker">Today</p>
+            <h2>Certificates issued today</h2>
+          </div>
+
+          <span class="today-count">{{ todayCertificates.length }}</span>
+        </div>
+
+        <div *ngIf="todayCertificates.length === 0" class="mini-empty">
+          No certificates have been issued today.
+        </div>
+
+        <div *ngIf="todayCertificates.length > 0" class="today-list">
+          <button
+            *ngFor="let certificate of todayCertificates.slice(0, 4)"
+            type="button"
+            class="today-row"
+            (click)="selectCertificate(certificate)"
+          >
+            <span class="today-avatar">
+              {{ certificate.learnerName.charAt(0) || 'L' }}
+            </span>
+
+            <span class="today-person">
+              <strong>{{ certificate.learnerName }}</strong>
+              <small>{{ certificate.courseTitle }}</small>
+            </span>
+
+            <span class="today-score">
+              {{
+                certificate.quizScorePercent !== null
+                  ? certificate.quizScorePercent + '%'
+                  : 'Passed'
+              }}
+            </span>
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <section class="certificate-table-card">
+      <div class="table-toolbar">
+        <div>
+          <p class="tool-kicker">Certificate registry</p>
+          <h2>All certificates</h2>
+        </div>
+
+        <input
+          type="search"
+          [(ngModel)]="searchTerm"
+          placeholder="Search learner, course, company, code..."
+        />
+      </div>
+
+      <div *ngIf="certificates.length === 0" class="table-empty">
+        No certificate records are available yet.
+      </div>
+
+      <div
+        *ngIf="certificates.length > 0 && filteredCertificates.length === 0"
+        class="table-empty"
+      >
+        No certificates match your search.
+      </div>
+
+      <div
+        *ngIf="filteredCertificates.length > 0"
+        class="table-wrap"
+      >
+        <table>
+          <thead>
+            <tr>
+              <th>Learner</th>
+              <th>Course</th>
+              <th>Company</th>
+              <th>Score</th>
+              <th>Issued</th>
+              <th>Status</th>
+              <th class="actions-column">Actions</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr
+              *ngFor="let certificate of filteredCertificates"
+              [class.selected]="certificate.id === selectedCertificateId"
+              (click)="selectCertificate(certificate)"
+            >
+              <td>
+                <strong>{{ certificate.learnerName }}</strong>
+                <small>{{ certificate.certificateNumber }}</small>
+              </td>
+
+              <td>{{ certificate.courseTitle }}</td>
+
+              <td>{{ certificate.companyName || '—' }}</td>
+
+              <td>
+                <span class="score-badge">
+                  {{
+                    certificate.quizScorePercent !== null
+                      ? certificate.quizScorePercent + '%'
+                      : 'Passed'
+                  }}
+                </span>
+              </td>
+
+              <td>{{ formatTodayLabel(certificate.issuedAt) }}</td>
+
+              <td>
+                <span
+                  class="status-pill"
+                  [ngClass]="statusClass(certificate.status)"
+                >
+                  {{ statusLabel(certificate.status) }}
+                </span>
+              </td>
+
+              <td
+                class="actions-cell"
+                (click)="$event.stopPropagation()"
+              >
+                <button
+                  class="table-button"
+                  type="button"
+                  [disabled]="!isIssued(certificate) || isDownloading(certificate)"
+                  (click)="downloadPdf(certificate)"
+                >
+                  {{
+                    isDownloading(certificate)
+                      ? 'Preparing...'
+                      : 'Download'
+                  }}
+                </button>
+
+                <button
+                  *ngIf="isIssued(certificate)"
+                  class="table-button danger-button"
+                  type="button"
+                  [disabled]="isRevoking(certificate)"
+                  (click)="revokeCertificate(certificate)"
+                >
+                  {{
+                    isRevoking(certificate)
+                      ? 'Revoking...'
+                      : 'Revoke'
+                  }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </ng-container>
+</section>

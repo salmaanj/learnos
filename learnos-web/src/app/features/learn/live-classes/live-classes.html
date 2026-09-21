@@ -1,0 +1,186 @@
+<div class="learner-live-classes-page">
+  <header class="page-header">
+    <div>
+      <h2>Live classes</h2>
+
+      <p>
+        Join scheduled instructor-led sessions and revisit completed classes.
+      </p>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button
+      type="button"
+      class="tab-button"
+      [class.active]="activeTab === 'UPCOMING'"
+      (click)="selectTab('UPCOMING')"
+    >
+      Upcoming
+      <span>{{ upcoming.length }}</span>
+    </button>
+
+    <button
+      type="button"
+      class="tab-button"
+      [class.active]="activeTab === 'HISTORY'"
+      (click)="selectTab('HISTORY')"
+    >
+      Completed
+      <span>{{ history.length }}</span>
+    </button>
+  </div>
+
+  <div
+    *ngIf="loading"
+    class="state-message card"
+  >
+    Loading live classes...
+  </div>
+
+  <div
+    *ngIf="!loading && error"
+    class="error-message card"
+  >
+    {{ error }}
+
+    <button
+      type="button"
+      class="btn btn-outline"
+      (click)="
+        activeTab === 'UPCOMING'
+          ? loadUpcoming()
+          : loadHistory()
+      "
+    >
+      Try again
+    </button>
+  </div>
+
+  <ng-container *ngIf="!loading && !error">
+    <section
+      *ngIf="visibleClasses.length > 0"
+      class="live-class-list"
+    >
+      <article
+        *ngFor="
+          let item of visibleClasses;
+          trackBy: trackById
+        "
+        class="live-class-card card"
+      >
+        <div class="date-card">
+          <span class="date-day">
+            {{ item.startAt | date: 'dd' }}
+          </span>
+
+          <span class="date-month">
+            {{ item.startAt | date: 'MMM' | uppercase }}
+          </span>
+        </div>
+
+        <div class="class-main">
+          <div class="class-heading">
+            <div>
+              <h3>{{ item.title }}</h3>
+
+              <p
+                *ngIf="item.description"
+                class="description"
+              >
+                {{ item.description }}
+              </p>
+            </div>
+
+            <span
+              class="status-badge"
+              [class.live]="item.status === 'LIVE'"
+              [class.completed]="item.status === 'COMPLETED'"
+              [class.cancelled]="item.status === 'CANCELLED'"
+            >
+              {{ statusLabel(item.status) }}
+            </span>
+          </div>
+
+          <div class="class-meta">
+            <span>
+              {{ formatDate(item.startAt) }}
+            </span>
+
+            <span>
+              {{ formatTime(item.startAt) }}
+              –
+              {{ formatTime(item.endAt) }}
+            </span>
+
+            <span>
+              {{ formatDuration(item.startAt, item.endAt) }}
+            </span>
+
+            <span>
+              {{ providerLabel(item.provider) }}
+            </span>
+          </div>
+
+          <div class="class-context">
+            <span *ngIf="item.courseTitle">
+              Course: {{ item.courseTitle }}
+            </span>
+
+            <span *ngIf="item.instructorName">
+              Trainer: {{ item.instructorName }}
+            </span>
+
+            <span
+              *ngIf="
+                item.attendanceStatus === 'ATTENDED'
+              "
+              class="attendance-text"
+            >
+              Attendance recorded
+            </span>
+          </div>
+        </div>
+
+        <div class="class-action">
+          <a
+            class="btn btn-primary"
+            [routerLink]="[
+              '/learn/live-classes',
+              item.id
+            ]"
+          >
+            {{
+              activeTab === 'UPCOMING'
+                ? 'View class'
+                : 'View recording'
+            }}
+          </a>
+        </div>
+      </article>
+    </section>
+
+    <section
+      *ngIf="visibleClasses.length === 0"
+      class="empty-state card"
+    >
+      <div class="empty-icon">◉</div>
+
+      <h3>
+        {{
+          activeTab === 'UPCOMING'
+            ? 'No upcoming live classes'
+            : 'No completed live classes'
+        }}
+      </h3>
+
+      <p>
+        {{
+          activeTab === 'UPCOMING'
+            ? 'When you are enrolled in a course with a scheduled live class, it will appear here.'
+            : 'Completed live classes and available recordings will appear here.'
+        }}
+      </p>
+    </section>
+  </ng-container>
+</div>

@@ -1,0 +1,249 @@
+<div class="verify-page">
+  <section class="verify-hero">
+    <button
+      class="brand-button"
+      type="button"
+      (click)="backToLogin()"
+      aria-label="Back to login">
+      <span class="brand-mark">L</span>
+      <span>LearnOS</span>
+    </button>
+
+    <div class="hero-content">
+      <div class="hero-icon">✓</div>
+
+      <h1>Certificate Verification</h1>
+
+      <p>
+        Confirm the authenticity of a LearnOS course-completion certificate
+        using the verification code printed on the certificate.
+      </p>
+
+      <div class="hero-points">
+        <div>
+          <span>✓</span>
+          Verify learner and course details
+        </div>
+
+        <div>
+          <span>✓</span>
+          Check certificate validity instantly
+        </div>
+
+        <div>
+          <span>✓</span>
+          No account or login required
+        </div>
+      </div>
+    </div>
+
+    <p class="hero-footer">
+      LearnOS Certificate Verification
+    </p>
+  </section>
+
+  <main class="verify-card-area">
+    <section class="verify-card" *ngIf="!result">
+      <div class="card-heading">
+        <div class="document-icon">
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <path d="M14 2v6h6"></path>
+            <path d="m9 15 2 2 4-4"></path>
+          </svg>
+        </div>
+
+        <div>
+          <h2>Verify a certificate</h2>
+          <p>Enter the code exactly as shown on the certificate.</p>
+        </div>
+      </div>
+
+      <form (ngSubmit)="verifyCertificate()" #verifyForm="ngForm">
+        <label for="verificationCode">Verification Code</label>
+
+        <input
+          id="verificationCode"
+          name="verificationCode"
+          type="text"
+          [(ngModel)]="verificationCode"
+          (input)="normalizeCode()"
+          placeholder="Example: A1B2C3D4E5F6G7H8"
+          autocomplete="off"
+          maxlength="80"
+          required />
+
+        <p class="field-help">
+          The verification code is printed near the bottom of the certificate.
+        </p>
+
+        <div class="error-message" *ngIf="error">
+          {{ error }}
+        </div>
+
+        <button
+          class="verify-button"
+          type="submit"
+          [disabled]="loading || !verifyForm.form.valid">
+          <svg
+            *ngIf="!loading"
+            width="19"
+            height="19"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true">
+            <path d="M20 6 9 17l-5-5"></path>
+          </svg>
+
+          <span class="spinner" *ngIf="loading"></span>
+
+          {{ loading ? 'Verifying Certificate...' : 'Verify Certificate' }}
+        </button>
+      </form>
+
+      <button
+        type="button"
+        class="back-link"
+        (click)="backToLogin()">
+        ← Back to login
+      </button>
+    </section>
+
+    <section
+      class="result-card result-card-valid"
+      *ngIf="result && isVerified">
+      <div class="result-status-icon valid-icon">✓</div>
+
+      <p class="result-kicker">CERTIFICATE VERIFIED</p>
+      <h2>This certificate is valid</h2>
+
+      <p class="result-message">
+        The certificate details below match an active LearnOS-issued
+        certificate.
+      </p>
+
+      <div class="certificate-details">
+        <div class="detail-row">
+          <span>Learner Name</span>
+          <strong>{{ result.learnerName || '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Course</span>
+          <strong>{{ result.courseTitle || '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Company</span>
+          <strong>{{ result.companyName || '—' }}</strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Date of Completion</span>
+          <strong>
+            {{
+              result.issuedAt
+                ? (result.issuedAt | date: 'dd-MM-yyyy')
+                : '—'
+            }}
+          </strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Assessment Score</span>
+          <strong>
+            {{
+              result.quizScorePercent !== null &&
+              result.quizScorePercent !== undefined
+                ? result.quizScorePercent + '%'
+                : 'Passed'
+            }}
+          </strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Certificate Number</span>
+          <strong class="code-value">
+            {{ result.certificateNumber || '—' }}
+          </strong>
+        </div>
+
+        <div class="detail-row">
+          <span>Verification Code</span>
+          <strong class="code-value">
+            {{ verificationCode }}
+          </strong>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="verify-another-button"
+        (click)="verifyAnother()">
+        Verify Another Certificate
+      </button>
+
+      <button
+        type="button"
+        class="back-link"
+        (click)="backToLogin()">
+        ← Back to login
+      </button>
+    </section>
+
+    <section
+      class="result-card result-card-invalid"
+      *ngIf="result && !isVerified">
+      <div class="result-status-icon invalid-icon">!</div>
+
+      <p class="result-kicker">CERTIFICATE NOT VALID</p>
+
+      <h2>
+        {{
+          isRevoked
+            ? 'This certificate has been revoked'
+            : 'Certificate could not be verified'
+        }}
+      </h2>
+
+      <p class="result-message">
+        {{
+          result.message ||
+          'The supplied verification code does not match an active certificate.'
+        }}
+      </p>
+
+      <div class="invalid-code-box">
+        <span>Verification Code</span>
+        <strong>{{ verificationCode }}</strong>
+      </div>
+
+      <button
+        type="button"
+        class="verify-another-button"
+        (click)="verifyAnother()">
+        Try Another Code
+      </button>
+
+      <button
+        type="button"
+        class="back-link"
+        (click)="backToLogin()">
+        ← Back to login
+      </button>
+    </section>
+  </main>
+</div>

@@ -1,0 +1,692 @@
+<section class="batches-page">
+  <div *ngIf="loading" class="state-card">
+    Loading batches...
+  </div>
+
+  <div *ngIf="!loading && error && !showCreateForm && !showEditForm" class="state-card error-card">
+    <p>{{ error }}</p>
+
+    <button
+      class="btn btn-outline"
+      type="button"
+      (click)="loadInitialData()"
+    >
+      Try again
+    </button>
+  </div>
+
+  <ng-container *ngIf="!loading">
+    <section class="batch-summary-grid">
+      <article class="summary-card summary-blue">
+        <span>Total batches</span>
+        <strong>{{ batches.length }}</strong>
+        <small>All batch records</small>
+      </article>
+
+      <article class="summary-card summary-green">
+        <span>Active & scheduled</span>
+        <strong>{{ activeBatchCount }}</strong>
+        <small>Current cohorts</small>
+      </article>
+
+      <article class="summary-card summary-orange">
+        <span>Batch memberships</span>
+        <strong>{{ totalBatchMembers }}</strong>
+        <small>Active learner assignments</small>
+      </article>
+
+      <article class="summary-card summary-gray">
+        <span>Archived</span>
+        <strong>{{ archivedBatchCount }}</strong>
+        <small>Retained for reporting</small>
+      </article>
+    </section>
+
+    <div class="page-toolbar">
+      <div>
+        <p class="page-kicker">Cohort management</p>
+        <h2>Batches & groups</h2>
+
+        <p class="page-copy">
+          Organize already enrolled learners into course cohorts for schedules,
+          live sessions, attendance, and reporting.
+        </p>
+      </div>
+
+      <button
+        class="btn btn-primary"
+        type="button"
+        (click)="openCreateForm()"
+      >
+        + Create new batch
+      </button>
+    </div>
+
+    <section *ngIf="showCreateForm" class="form-card">
+      <div class="section-heading">
+        <div>
+          <p class="page-kicker">New batch</p>
+          <h3>Create a course cohort</h3>
+        </div>
+
+        <button
+          class="close-button"
+          type="button"
+          title="Close"
+          (click)="cancelCreateForm()"
+        >
+          ×
+        </button>
+      </div>
+
+      <div *ngIf="error" class="inline-error">
+        {{ error }}
+      </div>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Batch name *</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.name"
+            placeholder="Example: FIN-NISM-01"
+          />
+        </label>
+
+        <label class="field">
+          <span>Batch code *</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.code"
+            placeholder="Example: FIN-NISM-01"
+          />
+        </label>
+
+        <label class="field field-wide">
+          <span>Course *</span>
+
+          <select [(ngModel)]="form.courseId">
+            <option value="">Select a course</option>
+
+            <option
+              *ngFor="let course of courses"
+              [value]="course.id"
+            >
+              {{ course.title }}
+              <ng-container *ngIf="course.companyName">
+                · {{ course.companyName }}
+              </ng-container>
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Delivery mode</span>
+
+          <select [(ngModel)]="form.deliveryMode">
+            <option
+              *ngFor="let mode of deliveryModes"
+              [value]="mode"
+            >
+              {{ deliveryModeLabel(mode) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Batch status</span>
+
+          <select [(ngModel)]="form.status">
+            <option
+              *ngFor="let status of batchStatuses"
+              [value]="status"
+            >
+              {{ statusLabel(status) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Start date</span>
+
+          <input
+            type="date"
+            [(ngModel)]="form.startDate"
+          />
+        </label>
+
+        <label class="field">
+          <span>End date</span>
+
+          <input
+            type="date"
+            [(ngModel)]="form.endDate"
+          />
+        </label>
+
+        <label class="field">
+          <span>Maximum learners *</span>
+
+          <input
+            type="number"
+            min="1"
+            [(ngModel)]="form.maxLearners"
+          />
+        </label>
+
+        <label class="field field-wide">
+          <span>Description</span>
+
+          <textarea
+            rows="3"
+            [(ngModel)]="form.description"
+            placeholder="Optional notes about this learning cohort"
+          ></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button
+          class="btn btn-outline"
+          type="button"
+          [disabled]="saving"
+          (click)="cancelCreateForm()"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="saving"
+          (click)="createBatch()"
+        >
+          {{ saving ? 'Creating batch...' : 'Create batch' }}
+        </button>
+      </div>
+    </section>
+
+    <section *ngIf="showEditForm && selectedBatch" class="form-card">
+      <div class="section-heading">
+        <div>
+          <p class="page-kicker">Edit batch</p>
+          <h3>{{ selectedBatch.name }}</h3>
+
+          <p class="details-meta">
+            Update dates, delivery mode, capacity, status, and other batch details.
+          </p>
+        </div>
+
+        <button
+          class="close-button"
+          type="button"
+          title="Close edit form"
+          (click)="cancelEditForm()"
+        >
+          ×
+        </button>
+      </div>
+
+      <div *ngIf="error" class="inline-error">
+        {{ error }}
+      </div>
+
+      <div class="form-grid">
+        <label class="field">
+          <span>Batch name *</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.name"
+          />
+        </label>
+
+        <label class="field">
+          <span>Batch code *</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.code"
+          />
+        </label>
+
+        <label class="field field-wide">
+          <span>Course *</span>
+
+          <select
+            [(ngModel)]="form.courseId"
+            [disabled]="!canChangeSelectedBatchCourse"
+          >
+            <option value="">Select a course</option>
+
+            <option
+              *ngFor="let course of courses"
+              [value]="course.id"
+            >
+              {{ course.title }}
+              <ng-container *ngIf="course.companyName">
+                · {{ course.companyName }}
+              </ng-container>
+            </option>
+          </select>
+
+          <small
+            *ngIf="!canChangeSelectedBatchCourse"
+            class="field-help"
+          >
+            Course cannot be changed after learners have been added to a batch.
+          </small>
+        </label>
+
+        <label class="field">
+          <span>Delivery mode</span>
+
+          <select [(ngModel)]="form.deliveryMode">
+            <option
+              *ngFor="let mode of deliveryModes"
+              [value]="mode"
+            >
+              {{ deliveryModeLabel(mode) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Batch status</span>
+
+          <select [(ngModel)]="form.status">
+            <option
+              *ngFor="let status of batchStatuses"
+              [value]="status"
+            >
+              {{ statusLabel(status) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Start date</span>
+
+          <input
+            type="date"
+            [(ngModel)]="form.startDate"
+          />
+        </label>
+
+        <label class="field">
+          <span>End date</span>
+
+          <input
+            type="date"
+            [(ngModel)]="form.endDate"
+          />
+        </label>
+
+        <label class="field">
+          <span>Maximum learners *</span>
+
+          <input
+            type="number"
+            min="1"
+            [(ngModel)]="form.maxLearners"
+          />
+        </label>
+
+        <label class="field field-wide">
+          <span>Description</span>
+
+          <textarea
+            rows="3"
+            [(ngModel)]="form.description"
+          ></textarea>
+        </label>
+      </div>
+
+      <div class="form-actions">
+        <button
+          class="btn btn-outline"
+          type="button"
+          [disabled]="saving"
+          (click)="cancelEditForm()"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          [disabled]="saving"
+          (click)="updateBatch()"
+        >
+          {{ saving ? 'Saving changes...' : 'Save changes' }}
+        </button>
+      </div>
+    </section>
+
+    <section *ngIf="selectedBatch && !showCreateForm && !showEditForm" class="details-card">
+      <div class="section-heading">
+        <div>
+          <p class="page-kicker">Selected batch</p>
+          <h3>{{ selectedBatch.name }}</h3>
+
+          <p class="details-meta">
+            {{ selectedBatch.code }} · {{ selectedBatch.courseTitle }}
+          </p>
+        </div>
+
+        <div class="details-actions">
+          <button
+            *ngIf="selectedBatch.status !== 'ARCHIVED'"
+            class="btn btn-outline"
+            type="button"
+            (click)="openEditForm()"
+          >
+            Edit batch
+          </button>
+
+          <button
+            class="close-button"
+            type="button"
+            title="Close details"
+            (click)="closeSelectedBatch()"
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <div class="details-summary">
+        <div>
+          <span>Status</span>
+
+          <b
+            class="status-pill"
+            [ngClass]="statusClass(selectedBatch.status)"
+          >
+            {{ statusLabel(selectedBatch.status) }}
+          </b>
+        </div>
+
+        <div>
+          <span>Delivery</span>
+          <strong>{{ deliveryModeLabel(selectedBatch.deliveryMode) }}</strong>
+        </div>
+
+        <div>
+          <span>Dates</span>
+
+          <strong>
+            {{ formatDate(selectedBatch.startDate) }} —
+            {{ formatDate(selectedBatch.endDate) }}
+          </strong>
+        </div>
+
+        <div>
+          <span>Capacity</span>
+
+          <strong>
+            {{ selectedBatch.learnerCount }} /
+            {{ selectedBatch.maxLearners }} learners
+          </strong>
+        </div>
+      </div>
+
+      <p
+        *ngIf="selectedBatch.description"
+        class="details-description"
+      >
+        {{ selectedBatch.description }}
+      </p>
+
+      <div *ngIf="memberError" class="inline-error">
+        {{ memberError }}
+      </div>
+
+      <section class="members-section">
+        <div class="members-heading">
+          <div>
+            <h4>Batch learners</h4>
+
+            <p>
+              Only learners with an active enrollment in
+              <strong>{{ selectedBatch.courseTitle }}</strong>
+              can be added to this batch.
+            </p>
+          </div>
+
+          <button
+            *ngIf="selectedBatch.status !== 'ARCHIVED'"
+            class="btn btn-danger"
+            type="button"
+            (click)="archiveSelectedBatch()"
+          >
+            Archive batch
+          </button>
+        </div>
+
+        <div
+          *ngIf="selectedBatch.status !== 'ARCHIVED'"
+          class="member-add-row"
+        >
+          <select
+            [(ngModel)]="newMemberId"
+            [disabled]="loadingEligibleLearners"
+          >
+            <option value="">
+              {{
+                loadingEligibleLearners
+                  ? 'Loading enrolled learners...'
+                  : availableLearners.length === 0
+                    ? 'No eligible enrolled learners available'
+                    : 'Select an enrolled learner to add'
+              }}
+            </option>
+
+            <option
+              *ngFor="let learner of availableLearners"
+              [value]="learner.learnerId"
+            >
+              {{ learner.learnerName }} · {{ learner.learnerEmail }}
+              · {{ learner.progressPercent }}%
+            </option>
+          </select>
+
+          <button
+            class="btn btn-primary"
+            type="button"
+            [disabled]="
+              addingMember ||
+              loadingEligibleLearners ||
+              !newMemberId
+            "
+            (click)="addLearnerToBatch()"
+          >
+            {{ addingMember ? 'Adding learner...' : 'Add learner' }}
+          </button>
+        </div>
+
+        <p
+          *ngIf="
+            !loadingEligibleLearners &&
+            selectedBatch.status !== 'ARCHIVED' &&
+            availableLearners.length === 0
+          "
+          class="eligibility-note"
+        >
+          No additional learners enrolled in this course are available. Manage
+          course enrollments first, then return here to assign learners to this
+          batch.
+        </p>
+
+        <div *ngIf="loadingMembers" class="member-state">
+          Loading batch learners...
+        </div>
+
+        <div
+          *ngIf="!loadingMembers && members.length === 0"
+          class="member-state"
+        >
+          No learners have been added to this batch yet.
+        </div>
+
+        <div
+          *ngIf="!loadingMembers && members.length > 0"
+          class="member-table-wrap"
+        >
+          <table class="member-table">
+            <thead>
+              <tr>
+                <th>Learner</th>
+                <th>Company</th>
+                <th>Progress</th>
+                <th>Joined</th>
+
+                <th *ngIf="selectedBatch.status !== 'ARCHIVED'">
+                  Action
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              <tr
+                *ngFor="let member of members; trackBy: trackByMemberId"
+              >
+                <td>
+                  <strong>{{ member.learnerName }}</strong>
+                  <small>{{ member.learnerEmail }}</small>
+                </td>
+
+                <td>{{ member.companyName || '—' }}</td>
+
+                <td>
+                  <div class="member-progress">
+                    <div class="progress-track">
+                      <span
+                        class="progress-fill progress-green"
+                        [style.width.%]="member.courseProgressPercent"
+                      ></span>
+                    </div>
+
+                    <span>{{ member.courseProgressPercent }}%</span>
+                  </div>
+                </td>
+
+                <td>{{ formatDate(member.joinedAt) }}</td>
+
+                <td *ngIf="selectedBatch.status !== 'ARCHIVED'">
+                  <button
+                    class="text-danger-button"
+                    type="button"
+                    (click)="removeLearnerFromBatch(member)"
+                  >
+                    Remove
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <section *ngIf="!error || batches.length > 0" class="batches-section">
+      <div class="section-heading">
+        <div>
+          <p class="page-kicker">All cohorts</p>
+          <h3>Batch list</h3>
+        </div>
+
+        <span class="section-count">
+          {{ batches.length }} total
+        </span>
+      </div>
+
+      <div *ngIf="batches.length === 0" class="empty-card">
+        <div class="empty-icon">+</div>
+        <h3>No batches yet</h3>
+
+        <p>
+          Create your first course batch, enroll learners through the Course
+          Enrollment panel, then assign the enrolled learners to a batch.
+        </p>
+
+        <button
+          class="btn btn-primary"
+          type="button"
+          (click)="openCreateForm()"
+        >
+          Create first batch
+        </button>
+      </div>
+
+      <div *ngIf="batches.length > 0" class="batch-grid">
+        <article
+          *ngFor="
+            let batch of batches;
+            let index = index;
+            trackBy: trackByBatchId
+          "
+          class="batch-card"
+          [class.selected]="selectedBatch?.id === batch.id"
+          (click)="selectBatch(batch)"
+        >
+          <div class="batch-card-head">
+            <span
+              class="batch-accent"
+              [ngClass]="progressClass(index)"
+            ></span>
+
+            <span
+              class="status-pill"
+              [ngClass]="statusClass(batch.status)"
+            >
+              {{ statusLabel(batch.status) }}
+            </span>
+          </div>
+
+          <h3>{{ batch.name }}</h3>
+          <p class="batch-code">{{ batch.code }}</p>
+
+          <p class="batch-course">
+            {{ batch.courseTitle }}
+          </p>
+
+          <p class="batch-company">
+            {{ batch.companyName || 'Company' }} ·
+            {{ deliveryModeLabel(batch.deliveryMode) }}
+          </p>
+
+          <div class="batch-metrics">
+            <span>{{ batch.learnerCount }} learners</span>
+            <span>{{ batch.completedLearnerCount }} completed</span>
+          </div>
+
+          <div class="progress-track">
+            <span
+              class="progress-fill"
+              [ngClass]="progressClass(index)"
+              [style.width.%]="batch.averageProgressPercent"
+            ></span>
+          </div>
+
+          <div class="batch-progress-label">
+            <span>
+              {{ batch.averageProgressPercent }}% average progress
+            </span>
+
+            <span>
+              {{ batch.maxLearners }} capacity
+            </span>
+          </div>
+
+          <div class="batch-dates">
+            {{ formatDate(batch.startDate) }} —
+            {{ formatDate(batch.endDate) }}
+          </div>
+        </article>
+      </div>
+    </section>
+  </ng-container>
+</section>

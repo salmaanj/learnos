@@ -1,0 +1,373 @@
+<div class="live-class-form-page">
+  <div class="page-header">
+    <div>
+      <a
+        class="back-link"
+        routerLink="/admin/live-classes"
+      >
+        ← Back to Live Classes
+      </a>
+
+      <h2>
+        {{
+          isEditMode
+            ? 'Edit live class'
+            : 'New live class'
+        }}
+      </h2>
+
+      <p>
+        {{
+          isEditMode
+            ? 'Update schedule, meeting details, and class availability.'
+            : 'Schedule an instructor-led session for a course or as a standalone event.'
+        }}
+      </p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="state-message card">
+    Loading live class form...
+  </div>
+
+  <div *ngIf="!loading && error" class="error-message card">
+    {{ error }}
+
+    <button
+      type="button"
+      class="btn btn-outline"
+      (click)="cancel()"
+    >
+      Back to Live Classes
+    </button>
+  </div>
+
+  <form
+    *ngIf="!loading && !error"
+    class="live-class-form card"
+    (ngSubmit)="save()"
+  >
+    <div *ngIf="formError" class="form-error">
+      {{ formError }}
+    </div>
+
+    <section class="form-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Class details</span>
+
+          <h3>What is this session about?</h3>
+
+          <p>
+            A live class can be linked to a course or created as a standalone event.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="form-field full-width">
+          <span>Live class title *</span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.title"
+            name="title"
+            maxlength="200"
+            placeholder="For example, Internal Audit Risk Assessment Workshop"
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Description</span>
+
+          <textarea
+            rows="4"
+            [(ngModel)]="form.description"
+            name="description"
+            maxlength="3000"
+            placeholder="Explain the objectives, agenda, and what learners should prepare."
+          ></textarea>
+        </label>
+
+        <label class="form-field">
+          <span>
+            Linked course
+            <small>Optional</small>
+          </span>
+
+          <select
+            [(ngModel)]="form.courseId"
+            name="courseId"
+            [disabled]="loadingOptions"
+          >
+            <option value="">
+              Standalone live class
+            </option>
+
+            <option
+              *ngFor="let course of courses"
+              [value]="course.id"
+            >
+              {{ course.title }}
+            </option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>
+            Trainer / instructor
+            <small>Optional</small>
+          </span>
+
+          <select
+            [(ngModel)]="form.instructorId"
+            name="instructorId"
+            [disabled]="loadingOptions"
+          >
+            <option value="">
+              Select later
+            </option>
+
+            <option
+              *ngFor="let instructor of instructors"
+              [value]="instructor.userId"
+            >
+              {{ instructorLabel(instructor) }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Schedule</span>
+
+          <h3>When will the class take place?</h3>
+
+          <p>
+            The class is displayed using the selected timezone.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-grid three-columns">
+        <label class="form-field">
+          <span>Start date and time *</span>
+
+          <input
+            type="datetime-local"
+            [(ngModel)]="form.startAt"
+            name="startAt"
+          />
+        </label>
+
+        <label class="form-field">
+          <span>End date and time *</span>
+
+          <input
+            type="datetime-local"
+            [(ngModel)]="form.endAt"
+            name="endAt"
+          />
+        </label>
+
+        <label class="form-field">
+          <span>Timezone *</span>
+
+          <select
+            [(ngModel)]="form.timezone"
+            name="timezone"
+          >
+            <option value="Asia/Kolkata">
+              India Standard Time (IST)
+            </option>
+
+            <option value="UTC">
+              Coordinated Universal Time (UTC)
+            </option>
+
+            <option value="Asia/Dubai">
+              Gulf Standard Time (GST)
+            </option>
+
+            <option value="Europe/London">
+              United Kingdom Time
+            </option>
+
+            <option value="America/New_York">
+              Eastern Time (US)
+            </option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Meeting details</span>
+
+          <h3>How will learners join?</h3>
+
+          <p>
+            LearnOS stores the external meeting link. Video conferencing remains with your chosen provider.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="form-field">
+          <span>Meeting provider *</span>
+
+          <select
+            [(ngModel)]="form.provider"
+            name="provider"
+          >
+            <option
+              *ngFor="let provider of providers"
+              [value]="provider.value"
+            >
+              {{ provider.label }}
+            </option>
+          </select>
+        </label>
+
+        <label class="form-field">
+          <span>Capacity</span>
+
+          <input
+            type="number"
+            min="1"
+            step="1"
+            [(ngModel)]="form.capacity"
+            name="capacity"
+            placeholder="Optional"
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Meeting URL *</span>
+
+          <input
+            type="url"
+            [(ngModel)]="form.meetingUrl"
+            name="meetingUrl"
+            maxlength="2000"
+            placeholder="https://meet.google.com/..."
+          />
+        </label>
+
+        <label class="form-field">
+          <span>
+            Meeting password
+            <small>Optional</small>
+          </span>
+
+          <input
+            type="text"
+            [(ngModel)]="form.meetingPassword"
+            name="meetingPassword"
+            maxlength="255"
+            placeholder="Only if the provider requires it"
+          />
+        </label>
+
+        <label class="form-field">
+          <span>Class status *</span>
+
+          <select
+            [(ngModel)]="form.status"
+            name="status"
+          >
+            <option
+              *ngFor="let status of statuses"
+              [value]="status.value"
+            >
+              {{ status.label }}
+            </option>
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="form-section">
+      <div class="section-heading">
+        <div>
+          <span class="section-kicker">Optional media</span>
+
+          <h3>Class image and recording</h3>
+
+          <p>
+            A recording URL can be added after the live session has ended.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <label class="form-field full-width">
+          <span>Thumbnail URL</span>
+
+          <input
+            type="url"
+            [(ngModel)]="form.thumbnailUrl"
+            name="thumbnailUrl"
+            maxlength="2000"
+            placeholder="Optional image URL"
+          />
+        </label>
+
+        <label class="form-field full-width">
+          <span>Recording URL</span>
+
+          <input
+            type="url"
+            [(ngModel)]="form.recordingUrl"
+            name="recordingUrl"
+            maxlength="2000"
+            placeholder="Add after the class is completed"
+          />
+        </label>
+      </div>
+    </section>
+
+    <div class="form-actions">
+      <button
+        type="button"
+        class="btn btn-outline"
+        [disabled]="saving"
+        (click)="cancel()"
+      >
+        Cancel
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        [disabled]="saving"
+        (click)="save('DRAFT')"
+      >
+        {{
+          saving
+            ? 'Saving…'
+            : 'Save as draft'
+        }}
+      </button>
+
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="saving"
+      >
+        {{
+          saving
+            ? 'Saving…'
+            : isEditMode
+              ? 'Save changes'
+              : 'Schedule class'
+        }}
+      </button>
+    </div>
+  </form>
+</div>

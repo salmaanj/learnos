@@ -1,0 +1,436 @@
+<div class="preview-page" *ngIf="!loading">
+  <button
+    type="button"
+    class="back-link"
+    (click)="backToCourses()"
+  >
+    ← Back to courses
+  </button>
+
+  <div
+    class="error-banner"
+    *ngIf="errorMessage"
+  >
+    {{ errorMessage }}
+  </div>
+
+  <ng-container *ngIf="course">
+    <section class="preview-banner">
+      <div class="preview-banner-icon">
+        ▶
+      </div>
+
+      <div>
+        <strong>Preview mode</strong>
+        <p>
+          You are viewing this course as a learner.
+          Your activity is not saved and does not affect
+          enrollments, progress, ratings, quizzes,
+          certificates, or analytics.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="draft-banner"
+      *ngIf="isDraft"
+    >
+      <strong>Draft preview</strong>
+      <span>
+        Learners cannot see this course until it is published.
+        You can still open and test all lessons here.
+      </span>
+    </section>
+
+    <section class="course-hero">
+      <div class="course-hero-main">
+        <div class="hero-badges">
+          <span
+            class="badge badge-draft"
+            *ngIf="isDraft"
+          >
+            Draft preview
+          </span>
+
+          <span
+            class="badge badge-published"
+            *ngIf="!isDraft"
+          >
+            {{ courseStatusLabel }}
+          </span>
+
+          <span
+            class="category-badge"
+            *ngIf="course.categoryName"
+          >
+            {{ course.categoryName }}
+          </span>
+        </div>
+
+        <h1 class="course-title">
+          {{ course.title }}
+        </h1>
+
+        <p
+          class="course-short-desc"
+          *ngIf="course.shortDescription"
+        >
+          {{ course.shortDescription }}
+        </p>
+
+        <div class="course-meta">
+          <span>
+            {{ totalVisibleLessons }} lesson(s)
+          </span>
+
+          <span>
+            · {{ totalModules }} module(s)
+          </span>
+
+          <span *ngIf="course.durationMinutes">
+            · {{ course.durationMinutes }} min
+          </span>
+
+          <span *ngIf="course.level">
+            · {{ course.level }}
+          </span>
+
+          <span *ngIf="course.instructorName">
+            · {{ course.instructorName }}
+          </span>
+        </div>
+      </div>
+
+      <aside class="preview-card">
+        <div class="preview-card-label">
+          Learner experience
+        </div>
+
+        <div class="preview-card-title">
+          Read-only preview
+        </div>
+
+        <p>
+          Media and documents can be opened normally.
+          Progress, completion, enrollment, ratings, and
+          assessment activity are disabled.
+        </p>
+
+        <button
+          type="button"
+          class="btn btn-outline"
+          (click)="backToCourses()"
+        >
+          Exit preview
+        </button>
+      </aside>
+    </section>
+
+    <section class="course-overview">
+      <article class="overview-card">
+        <h2>About this course</h2>
+        <p>{{ courseDescription }}</p>
+      </article>
+
+      <article
+        class="overview-card"
+        *ngIf="learningOutcomes.length > 0"
+      >
+        <h2>What learners will learn</h2>
+
+        <ul>
+          <li *ngFor="let outcome of learningOutcomes">
+            {{ outcome }}
+          </li>
+        </ul>
+      </article>
+
+      <article
+        class="overview-card"
+        *ngIf="prerequisites.length > 0"
+      >
+        <h2>Prerequisites</h2>
+
+        <ul>
+          <li *ngFor="let prerequisite of prerequisites">
+            {{ prerequisite }}
+          </li>
+        </ul>
+      </article>
+    </section>
+
+    <section class="content-section">
+      <div class="content-section-heading">
+        <div>
+          <h2>Course content</h2>
+          <p>
+            {{ totalVisibleLessons }} available lesson(s)
+            · Preview activity is not recorded
+          </p>
+        </div>
+
+        <span class="preview-note">
+          Read-only learner preview
+        </span>
+      </div>
+
+      <div
+        class="loading-content"
+        *ngIf="loadingContent"
+      >
+        Loading course content…
+      </div>
+
+      <div
+        class="content-layout"
+        *ngIf="!loadingContent"
+      >
+        <div class="module-list">
+          <div
+            class="module"
+            *ngFor="
+              let module of modules;
+              let moduleIndex = index;
+              trackBy: trackByModuleId
+            "
+          >
+            <button
+              type="button"
+              class="module-header"
+              (click)="toggleModule(module)"
+            >
+              <div>
+                <span>
+                  Module {{ moduleIndex + 1 }} —
+                  {{ module.title }}
+                </span>
+
+                <small *ngIf="module.description">
+                  {{ module.description }}
+                </small>
+              </div>
+
+              <span class="lesson-count">
+                {{ module.lessons.length }}
+                lesson(s)
+                {{ module.expanded ? '⌃' : '⌄' }}
+              </span>
+            </button>
+
+            <div *ngIf="module.expanded">
+              <button
+                type="button"
+                class="lesson-row"
+                *ngFor="
+                  let lesson of module.lessons;
+                  let lessonIndex = index;
+                  trackBy: trackByLessonId
+                "
+                [class.active]="selectedLesson?.id === lesson.id"
+                (click)="openLesson(lesson)"
+              >
+                <span class="icon lesson-icon">
+                  {{ lessonIcon(lesson) }}
+                </span>
+
+                <span class="lesson-name">
+                  Lesson {{ lessonIndex + 1 }} —
+                  {{ lesson.title }}
+                </span>
+
+                <span
+                  class="lesson-status"
+                  [class.draft]="
+                    isDraft && !lesson.isPublished
+                  "
+                >
+                  {{ lessonStatus(lesson) }}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div
+            class="state-message"
+            *ngIf="modules.length === 0"
+          >
+            No lessons are available for this preview.
+          </div>
+        </div>
+
+        <div class="viewer">
+          <div
+            *ngIf="!selectedLesson"
+            class="viewer-empty"
+          >
+            <div class="viewer-empty-icon">
+              ▶
+            </div>
+
+            <strong>Select a lesson to begin</strong>
+
+            <span>
+              This is a read-only preview. No progress is saved.
+            </span>
+          </div>
+
+          <div *ngIf="selectedLesson">
+            <div class="viewer-heading">
+              <div>
+                <span class="viewer-type">
+                  {{ selectedLesson.type }}
+                </span>
+
+                <h3>
+                  {{ selectedLesson.title }}
+                </h3>
+              </div>
+
+              <span
+                class="badge badge-draft"
+                *ngIf="
+                  isDraft &&
+                  !selectedLesson.isPublished
+                "
+              >
+                Draft lesson
+              </span>
+
+              <span
+                class="badge badge-preview"
+                *ngIf="
+                  !isDraft ||
+                  selectedLesson.isPublished
+                "
+              >
+                Preview
+              </span>
+            </div>
+
+            <p
+              *ngIf="selectedLesson.description"
+              class="lesson-description"
+            >
+              {{ selectedLesson.description }}
+            </p>
+
+            <div class="read-only-notice">
+              Preview mode — playback and reading are available,
+              but progress is not saved.
+            </div>
+
+            <ng-container
+              *ngIf="selectedLesson.type === 'VIDEO'"
+            >
+              <video
+                *ngIf="lessonUrl(selectedLesson)"
+                [src]="lessonUrl(selectedLesson)"
+                controls
+                class="video-viewer"
+              ></video>
+
+              <div
+                class="document-empty"
+                *ngIf="!lessonUrl(selectedLesson)"
+              >
+                No video has been uploaded for this lesson yet.
+              </div>
+            </ng-container>
+
+            <ng-container
+              *ngIf="selectedLesson.type === 'AUDIO'"
+            >
+              <audio
+                *ngIf="lessonUrl(selectedLesson)"
+                [src]="lessonUrl(selectedLesson)"
+                controls
+                class="audio-viewer"
+              ></audio>
+
+              <div
+                class="document-empty"
+                *ngIf="!lessonUrl(selectedLesson)"
+              >
+                No audio has been uploaded for this lesson yet.
+              </div>
+            </ng-container>
+
+            <ng-container
+              *ngIf="isDocumentLesson(selectedLesson)"
+            >
+              <div
+                class="document-frame-wrapper"
+                *ngIf="documentUrl(selectedLesson)"
+              >
+                <iframe
+                  [src]="safeUrl(documentUrl(selectedLesson))"
+                  class="document-viewer"
+                  title="Course preview document"
+                ></iframe>
+              </div>
+
+              <div
+                class="document-empty"
+                *ngIf="!documentUrl(selectedLesson)"
+              >
+                No document has been uploaded for this lesson yet.
+              </div>
+            </ng-container>
+
+            <ng-container
+              *ngIf="selectedLesson.type === 'TEXT'"
+            >
+              <div
+                *ngIf="
+                  selectedLesson.textContent &&
+                  selectedLesson.textContent.trim().length > 0;
+                  else noTextContent
+                "
+                class="text-content"
+              >
+                {{ selectedLesson.textContent }}
+              </div>
+
+              <ng-template #noTextContent>
+                <div class="document-empty">
+                  No text content has been added for this lesson yet.
+                </div>
+              </ng-template>
+            </ng-container>
+
+            <div class="navigation-actions">
+              <button
+                type="button"
+                class="btn btn-outline"
+                [disabled]="!canGoPrevious"
+                (click)="previousLesson()"
+              >
+                ← Previous lesson
+              </button>
+
+              <span>
+                Lesson {{ currentLessonNumber }}
+                of {{ allLessonCount }}
+              </span>
+
+              <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="!canGoNext"
+                (click)="nextLesson()"
+              >
+                Next lesson →
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </ng-container>
+</div>
+
+<div class="preview-page" *ngIf="loading">
+  <div class="state-message">
+    Loading course preview…
+  </div>
+</div>

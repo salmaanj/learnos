@@ -1,0 +1,94 @@
+<section class="payment-history-page">
+  <div class="page-header">
+    <div>
+      <h1>Payment History</h1>
+      <p>View your course payment records and transaction status.</p>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="table-card state-card">
+    Loading payment history...
+  </div>
+
+  <div *ngIf="!loading && error" class="table-card state-card error-state">
+    {{ error }}
+  </div>
+
+  <div
+    *ngIf="!loading && !error && payments.length === 0"
+    class="table-card state-card"
+  >
+    No payment records found.
+  </div>
+
+  <div
+    *ngIf="!loading && !error && payments.length > 0"
+    class="table-card"
+  >
+    <div class="table-toolbar">
+      <div>
+        <h2>Course Payments</h2>
+        <span>{{ payments.length }} payment{{ payments.length === 1 ? '' : 's' }}</span>
+      </div>
+    </div>
+
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Course</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Payment Method</th>
+            <th>Payment Date</th>
+            <th>Reference</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <tr *ngFor="let payment of payments">
+            <td>
+              <div class="course-cell">
+                <div class="course-icon">C</div>
+
+                <div>
+                  <strong>{{ getTitle(payment) }}</strong>
+                  <span>{{ getTypeLabel(payment) }}</span>
+                </div>
+              </div>
+            </td>
+
+            <td>
+              <span class="amount">
+                {{ payment.amount | currency: payment.currency : 'symbol-narrow' : '1.2-2' }}
+              </span>
+            </td>
+
+            <td>
+              <span
+                class="status-badge"
+                [ngClass]="getStatusClass(payment.status)"
+              >
+                {{ getStatusLabel(payment.status) }}
+              </span>
+            </td>
+
+            <td>
+              {{ getPaymentMethodLabel(payment) }}
+            </td>
+
+            <td>
+              {{ (payment.paidAt || payment.createdAt) | date: 'mediumDate' }}
+            </td>
+
+            <td>
+              <span class="reference">
+                {{ mask(payment.razorpayPaymentId || payment.razorpayOrderId) }}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>

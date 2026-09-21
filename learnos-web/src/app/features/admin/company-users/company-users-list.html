@@ -1,0 +1,120 @@
+<div class="courses-page">
+  <div class="error-banner" *ngIf="error">
+    {{ error }}
+  </div>
+
+  <div class="table-toolbar">
+    <div class="table-count">
+      {{
+        filteredCompanyName
+          ? filteredCompanyName + ' users'
+          : 'Company users'
+      }}
+      <span>({{ displayedUsers.length }})</span>
+    </div>
+
+    <input
+      #searchInput
+      type="search"
+      class="table-search"
+      placeholder="Search users..."
+      [value]="searchTerm"
+      (input)="onSearch(searchInput.value)"
+    />
+  </div>
+
+  <div class="table-card">
+    <table class="tbl" *ngIf="!loading && displayedUsers.length > 0">
+      <thead>
+        <tr>
+          <th class="number-column">#</th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('name')"
+          >
+            Name
+            <span class="sort-icon">{{ sortIndicator('name') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('email')"
+          >
+            Email
+            <span class="sort-icon">{{ sortIndicator('email') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('companyName')"
+          >
+            Company
+            <span class="sort-icon">{{ sortIndicator('companyName') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('role')"
+          >
+            Role
+            <span class="sort-icon">{{ sortIndicator('role') }}</span>
+          </th>
+
+          <th
+            class="sortable"
+            (click)="sortBy('status')"
+          >
+            Status
+            <span class="sort-icon">{{ sortIndicator('status') }}</span>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody>
+        <tr
+          *ngFor="let user of displayedUsers; let index = index; trackBy: trackById"
+          class="clickable-row"
+          [routerLink]="['/admin/companies/users', user.id, 'edit']"
+        >
+          <td class="number-column">{{ index + 1 }}</td>
+          <td class="user-name">{{ user.name }}</td>
+          <td>{{ user.email }}</td>
+
+          <td>
+            <span class="pill category">
+              {{ user.companyName || 'No Company' }}
+            </span>
+          </td>
+
+          <td>
+            <span [class]="getRoleClass(user.role)">
+              {{ user.role }}
+            </span>
+          </td>
+
+          <td>
+            <span [class]="getStatusClass(user.status)">
+              {{ user.status }}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div *ngIf="loading" class="state-msg">
+      Loading company users...
+    </div>
+
+    <div
+      *ngIf="!loading && users.length > 0 && displayedUsers.length === 0"
+      class="state-msg"
+    >
+      No users match your search.
+    </div>
+
+    <div *ngIf="!loading && users.length === 0" class="state-msg">
+      No company users found.
+    </div>
+  </div>
+</div>
