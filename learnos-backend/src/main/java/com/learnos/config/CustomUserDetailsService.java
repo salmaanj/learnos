@@ -19,6 +19,8 @@ import java.util.List;
 public class CustomUserDetailsService
         implements UserDetailsService {
 
+    private static final String SUPER_ADMIN = "SUPER_ADMIN";
+
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
 
@@ -40,6 +42,13 @@ public class CustomUserDetailsService
         List<UserRole> dynamicRoles =
                 userRoleRepository.findRolesByUserId(user.getId());
 
+        boolean superAdmin = dynamicRoles.stream()
+                .anyMatch(userRole ->
+                        SUPER_ADMIN.equalsIgnoreCase(
+                                userRole.getRole().getName()
+                        )
+                );
+
         for (UserRole userRole : dynamicRoles) {
             authorities.add(
                     new SimpleGrantedAuthority(
@@ -58,6 +67,18 @@ public class CustomUserDetailsService
                                     )
                             )
                     );
+        }
+
+        if (superAdmin) {
+            authorities.add(
+                    new SimpleGrantedAuthority("ROLE_ADMIN")
+            );
+            authorities.add(
+                    new SimpleGrantedAuthority("ROLE_USER")
+            );
+            authorities.add(
+                    new SimpleGrantedAuthority("ROLE_TUTOR")
+            );
         }
 
         if (authorities.isEmpty()) {
