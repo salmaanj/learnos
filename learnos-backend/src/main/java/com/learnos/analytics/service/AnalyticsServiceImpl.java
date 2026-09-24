@@ -4,6 +4,7 @@ import com.learnos.analytics.dto.AnalyticsResponse;
 import com.learnos.auth.model.Role;
 import com.learnos.auth.model.User;
 import com.learnos.auth.repository.UserRepository;
+import com.learnos.auth.service.AuthorizationService;
 import com.learnos.company.entity.Company;
 import com.learnos.company.repository.CompanyRepository;
 import com.learnos.course.repository.CourseRepository;
@@ -29,13 +30,13 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class AnalyticsServiceImpl implements AnalyticsService {
 
-    private static final String SUPER_ADMIN_EMAIL = "admin@blute.co.in";
-
     private final UserRepository userRepository;
+    private final AuthorizationService authorizationService;
     private final CompanyRepository companyRepository;
     private final CourseRepository courseRepository;
     private final CoursePaymentRepository coursePaymentRepository;
-    private final CompanySubscriptionRepository companySubscriptionRepository;
+    private final CompanySubscriptionRepository
+            companySubscriptionRepository;
 
     @Override
     public AnalyticsResponse getAnalytics(UUID requestedCompanyId) {
@@ -166,7 +167,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     private AnalyticsResponse.CompanyRow toCompanyRow(Company company) {
-        CompanySubscription subscription = latestSubscription(company.getId());
+        CompanySubscription subscription =
+                latestSubscription(company.getId());
 
         return new AnalyticsResponse.CompanyRow(
                 company.getId(),
@@ -183,12 +185,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private AnalyticsResponse.CompanyDetail toCompanyDetail(
             Company company
     ) {
-        CompanySubscription subscription = latestSubscription(company.getId());
+        CompanySubscription subscription =
+                latestSubscription(company.getId());
 
         long successfulPayments = companySubscriptionRepository
                 .findByCompany_IdOrderByCreatedAtDesc(company.getId())
                 .stream()
-                .filter(item -> item.getStatus() == SubscriptionStatus.ACTIVE)
+                .filter(item ->
+                        item.getStatus() == SubscriptionStatus.ACTIVE
+                )
                 .count();
 
         return new AnalyticsResponse.CompanyDetail(
@@ -213,9 +218,11 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     private long countAllCourses(List<Company> companies) {
         return companies.stream()
-                .mapToLong(company -> courseRepository.countByCompanyId(
-                        company.getId()
-                ))
+                .mapToLong(company ->
+                        courseRepository.countByCompanyId(
+                                company.getId()
+                        )
+                )
                 .sum();
     }
 
@@ -274,7 +281,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
             Company company,
             CompanySubscription subscription
     ) {
-        if (subscription != null && subscription.getExpiryDate() != null) {
+        if (subscription != null
+                && subscription.getExpiryDate() != null) {
             return subscription.getExpiryDate();
         }
 
@@ -301,8 +309,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     }
 
     private boolean isSuperAdmin(User user) {
-        return user != null
-                && user.getEmail() != null
-                && SUPER_ADMIN_EMAIL.equalsIgnoreCase(user.getEmail());
+        return authorizationService.isSuperAdmin(user);
     }
 }
