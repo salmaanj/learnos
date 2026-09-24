@@ -5,6 +5,7 @@ import com.learnos.auth.dto.UserUpdateRequest;
 import com.learnos.auth.model.Role;
 import com.learnos.auth.model.User;
 import com.learnos.auth.repository.UserRepository;
+import com.learnos.auth.service.AuthorizationService;
 import com.learnos.company.entity.Company;
 import com.learnos.company.repository.CompanyRepository;
 import com.learnos.companyuser.dto.CompanyUserResponse;
@@ -28,12 +29,22 @@ public class CompanyUserServiceImpl implements CompanyUserService {
     private final CompanyUserRepository companyUserRepository;
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
+    private final AuthorizationService authorizationService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public CompanyUserResponse createCompanyUser(UserCreateRequest request) {
+    public CompanyUserResponse createCompanyUser(
+            UserCreateRequest request
+    ) {
         User currentUser = getCurrentUser();
-        if (!isSuperAdmin(currentUser) && (currentUser == null || currentUser.getCompany() == null)) {
+
+        if (
+                !isSuperAdmin(currentUser)
+                        && (
+                        currentUser == null
+                                || currentUser.getCompany() == null
+                )
+        ) {
             throw new IllegalArgumentException("Access denied");
         }
 
@@ -42,23 +53,38 @@ public class CompanyUserServiceImpl implements CompanyUserService {
         }
 
         Company company;
+
         if (isSuperAdmin(currentUser)) {
             if (request.companyId() == null) {
                 throw new IllegalArgumentException("Company is required");
             }
+
             company = companyRepository.findById(request.companyId())
-                    .orElseThrow(() -> new IllegalArgumentException("Company not found"));
+                    .orElseThrow(() ->
+                            new IllegalArgumentException(
+                                    "Company not found"
+                            )
+                    );
         } else {
             company = currentUser.getCompany();
         }
 
-        Role role = request.role() != null ? Role.valueOf(request.role()) : Role.LEARNER;
+        Role role = request.role() != null
+                ? Role.valueOf(request.role())
+                : Role.LEARNER;
 
-        // A "User" (content-manager) staff account may only ever create
-        // Learners - never another User, Tutor, or Admin. Prevents
-        // privilege escalation by a non-Admin staff account.
-        if (!isSuperAdmin(currentUser) && currentUser.getRole() == Role.USER && role != Role.LEARNER) {
-            throw new IllegalArgumentException("You can only create learner accounts");
+        /*
+         * A legacy USER account may create Learners only.
+         * This preserves the current privilege-escalation protection.
+         */
+        if (
+                !isSuperAdmin(currentUser)
+                        && currentUser.getRole() == Role.USER
+                        && role != Role.LEARNER
+        ) {
+            throw new IllegalArgumentException(
+                    "You can only create learner accounts"
+            );
         }
 
         User user = User.builder()
@@ -79,33 +105,60 @@ public class CompanyUserServiceImpl implements CompanyUserService {
         CompanyUser companyUser = CompanyUser.builder()
                 .user(savedUser)
                 .company(company)
-                .role(request.companyRole() != null ? request.companyRole() : role.name())
-                .status(request.status() != null ? request.status() : "Active")
+                .role(
+                        request.companyRole() != null
+                                ? request.companyRole()
+                                : role.name()
+                )
+                .status(
+                        request.status() != null
+                                ? request.status()
+                                : "Active"
+                )
                 .build();
 
         return toResponse(companyUserRepository.save(companyUser));
     }
 
     @Override
-    public CompanyUserResponse updateCompanyUser(UUID id, UserUpdateRequest request) {
+    public CompanyUserResponse updateCompanyUser(
+            UUID id,
+            UserUpdateRequest request
+    ) {
         User currentUser = getCurrentUser();
+
         CompanyUser companyUser = companyUserRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Company user not found"));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Company user not found"
+                        )
+                );
 
         if (!isSuperAdmin(currentUser)) {
-            if (currentUser == null || currentUser.getCompany() == null || companyUser.getCompany() == null
-                    || !currentUser.getCompany().getId().equals(companyUser.getCompany().getId())) {
+            if (
+                    currentUser == null
+                            || currentUser.getCompany() == null
+                            || companyUser.getCompany() == null
+                            || !currentUser.getCompany()
+                            .getId()
+                            .equals(companyUser.getCompany().getId())
+            ) {
                 throw new IllegalArgumentException("Access denied");
             }
         }
 
         User user = companyUser.getUser();
+
         if (user == null) {
-            throw new IllegalArgumentException("Associated user not found");
+            throw new IllegalArgumentException(
+                    "Associated user not found"
+            );
         }
 
-        if (!user.getEmail().equalsIgnoreCase(request.email())
-                && userRepository.existsByEmail(request.email())) {
+        if (
+                !user.getEmail().equalsIgnoreCase(request.email())
+                        && userRepository.existsByEmail(request.email())
+        ) {
             throw new IllegalArgumentException("Email already exists");
         }
 
@@ -116,30 +169,60 @@ public class CompanyUserServiceImpl implements CompanyUserService {
 
         if (request.role() != null && !request.role().isBlank()) {
             Role newRole = Role.valueOf(request.role());
-            if (!isSuperAdmin(currentUser) && currentUser.getRole() == Role.USER && newRole != Role.LEARNER) {
-                throw new IllegalArgumentException("You can only manage learner accounts");
+
+            if (
+                    !isSuperAdmin(currentUser)
+                            && currentUser.getRole() == Role.USER
+                            && newRole != Role.LEARNER
+            ) {
+                throw new IllegalArgumentException(
+                        "You can only manage learner accounts"
+                );
             }
+
             user.setRole(newRole);
         }
 
-        if (request.password() != null && !request.password().isBlank()) {
-            user.setPassword(passwordEncoder.encode(request.password()));
+        if (
+                request.password() != null
+                        && !request.password().isBlank()
+        ) {
+            user.setPassword(
+                    passwordEncoder.encode(request.password())
+            );
         }
 
         Company company = companyUser.getCompany();
-        if (isSuperAdmin(currentUser) && request.companyId() != null && !request.companyId().isBlank()) {
-            company = companyRepository.findById(UUID.fromString(request.companyId()))
-                    .orElseThrow(() -> new IllegalArgumentException("Company not found"));
+
+        if (
+                isSuperAdmin(currentUser)
+                        && request.companyId() != null
+                        && !request.companyId().isBlank()
+        ) {
+            company = companyRepository.findById(
+                            UUID.fromString(request.companyId())
+                    )
+                    .orElseThrow(() ->
+                            new IllegalArgumentException(
+                                    "Company not found"
+                            )
+                    );
         }
 
         user.setCompany(company);
         userRepository.save(user);
 
         companyUser.setCompany(company);
+
         if (request.role() != null && !request.role().isBlank()) {
             companyUser.setRole(request.role());
         }
-        companyUser.setStatus(request.status() != null ? request.status() : "Active");
+
+        companyUser.setStatus(
+                request.status() != null
+                        ? request.status()
+                        : "Active"
+        );
 
         return toResponse(companyUserRepository.save(companyUser));
     }
@@ -156,8 +239,14 @@ public class CompanyUserServiceImpl implements CompanyUserService {
                     .toList();
         }
 
-        if (currentUser != null && currentUser.getCompany() != null) {
-            return companyUserRepository.findByCompany_Id(currentUser.getCompany().getId())
+        if (
+                currentUser != null
+                        && currentUser.getCompany() != null
+        ) {
+            return companyUserRepository
+                    .findByCompany_Id(
+                            currentUser.getCompany().getId()
+                    )
                     .stream()
                     .map(this::toResponse)
                     .toList();
@@ -170,12 +259,23 @@ public class CompanyUserServiceImpl implements CompanyUserService {
     @Transactional(readOnly = true)
     public CompanyUserResponse getCompanyUserById(UUID id) {
         User currentUser = getCurrentUser();
+
         CompanyUser companyUser = companyUserRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Company user not found"));
+                .orElseThrow(() ->
+                        new IllegalArgumentException(
+                                "Company user not found"
+                        )
+                );
 
         if (!isSuperAdmin(currentUser)) {
-            if (currentUser == null || currentUser.getCompany() == null || companyUser.getCompany() == null
-                    || !currentUser.getCompany().getId().equals(companyUser.getCompany().getId())) {
+            if (
+                    currentUser == null
+                            || currentUser.getCompany() == null
+                            || companyUser.getCompany() == null
+                            || !currentUser.getCompany()
+                            .getId()
+                            .equals(companyUser.getCompany().getId())
+            ) {
                 throw new IllegalArgumentException("Access denied");
             }
         }
@@ -183,7 +283,9 @@ public class CompanyUserServiceImpl implements CompanyUserService {
         return toResponse(companyUser);
     }
 
-    private CompanyUserResponse toResponse(CompanyUser companyUser) {
+    private CompanyUserResponse toResponse(
+            CompanyUser companyUser
+    ) {
         User user = companyUser.getUser();
         Company company = companyUser.getCompany();
 
@@ -201,16 +303,20 @@ public class CompanyUserServiceImpl implements CompanyUserService {
     }
 
     private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        Authentication auth = SecurityContextHolder
+                .getContext()
+                .getAuthentication();
+
         if (auth == null || auth.getName() == null) {
             return null;
         }
-        return userRepository.findByEmail(auth.getName()).orElse(null);
+
+        return userRepository
+                .findByEmail(auth.getName())
+                .orElse(null);
     }
 
     private boolean isSuperAdmin(User user) {
-        return user != null
-                && user.getEmail() != null
-                && user.getEmail().equalsIgnoreCase("admin@blute.co.in");
+        return authorizationService.isSuperAdmin(user);
     }
 }
