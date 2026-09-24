@@ -2,6 +2,7 @@ package com.learnos.company.service;
 
 import com.learnos.auth.model.User;
 import com.learnos.auth.repository.UserRepository;
+import com.learnos.auth.service.AuthorizationService;
 import com.learnos.company.dto.CompanyDto;
 import com.learnos.company.entity.Company;
 import com.learnos.company.repository.CompanyRepository;
@@ -41,6 +42,7 @@ public class CompanyServiceImpl implements CompanyService {
 
     private final CompanyRepository companyRepository;
     private final UserRepository userRepository;
+    private final AuthorizationService authorizationService;
     private final CompanyUserRepository companyUserRepository;
     private final CourseRepository courseRepository;
     private final CoursePaymentRepository coursePaymentRepository;
@@ -60,7 +62,8 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         if (currentUser != null && currentUser.getCompany() != null) {
-            return companyRepository.findById(currentUser.getCompany().getId())
+            return companyRepository
+                    .findById(currentUser.getCompany().getId())
                     .map(company -> List.of(mapToDto(company)))
                     .orElse(List.of());
         }
@@ -101,7 +104,11 @@ public class CompanyServiceImpl implements CompanyService {
 
         ensureCanAccessCompany(currentUser, company);
 
-        applyCompanyDetails(company, dto, isSuperAdmin(currentUser));
+        applyCompanyDetails(
+                company,
+                dto,
+                isSuperAdmin(currentUser)
+        );
 
         Company saved = companyRepository.save(company);
         return mapToDto(saved);
@@ -254,7 +261,9 @@ public class CompanyServiceImpl implements CompanyService {
                 .count();
 
         dto.setLearnerCount(learnerCount);
-        dto.setCourseCount(courseRepository.countByCompanyId(company.getId()));
+        dto.setCourseCount(
+                courseRepository.countByCompanyId(company.getId())
+        );
 
         BigDecimal courseRevenue =
                 coursePaymentRepository
@@ -279,7 +288,10 @@ public class CompanyServiceImpl implements CompanyService {
                 .orElseThrow(() -> new RuntimeException("Company not found"));
     }
 
-    private void ensureCanAccessCompany(User currentUser, Company company) {
+    private void ensureCanAccessCompany(
+            User currentUser,
+            Company company
+    ) {
         if (isSuperAdmin(currentUser)) {
             return;
         }
@@ -287,7 +299,9 @@ public class CompanyServiceImpl implements CompanyService {
         if (
                 currentUser == null
                         || currentUser.getCompany() == null
-                        || !currentUser.getCompany().getId().equals(company.getId())
+                        || !currentUser.getCompany()
+                        .getId()
+                        .equals(company.getId())
         ) {
             throw new RuntimeException("Access denied");
         }
@@ -299,12 +313,17 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         if (file.getSize() > MAX_LOGO_SIZE_BYTES) {
-            throw new RuntimeException("Logo file size must be 5 MB or less");
+            throw new RuntimeException(
+                    "Logo file size must be 5 MB or less"
+            );
         }
 
         String contentType = file.getContentType();
 
-        if (contentType == null || !ALLOWED_LOGO_TYPES.contains(contentType)) {
+        if (
+                contentType == null
+                        || !ALLOWED_LOGO_TYPES.contains(contentType)
+        ) {
             throw new RuntimeException(
                     "Only PNG, JPG, WebP, and SVG logo files are allowed"
             );
@@ -312,7 +331,10 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private String getFileExtension(String originalFileName) {
-        if (originalFileName == null || !originalFileName.contains(".")) {
+        if (
+                originalFileName == null
+                        || !originalFileName.contains(".")
+        ) {
             return ".png";
         }
 
@@ -336,7 +358,9 @@ public class CompanyServiceImpl implements CompanyService {
     private void deleteOldLocalLogo(String logoUrl) {
         if (
                 logoUrl == null
-                        || !logoUrl.startsWith("/files/company-logos/")
+                        || !logoUrl.startsWith(
+                        "/files/company-logos/"
+                )
         ) {
             return;
         }
@@ -375,12 +399,12 @@ public class CompanyServiceImpl implements CompanyService {
             return null;
         }
 
-        return userRepository.findByEmail(auth.getName()).orElse(null);
+        return userRepository
+                .findByEmail(auth.getName())
+                .orElse(null);
     }
 
     private boolean isSuperAdmin(User user) {
-        return user != null
-                && user.getEmail() != null
-                && user.getEmail().equalsIgnoreCase("admin@blute.co.in");
+        return authorizationService.isSuperAdmin(user);
     }
 }
