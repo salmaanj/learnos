@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import com.learnos.auth.service.AuthorizationService;
 
 import java.util.List;
 import java.util.UUID;
@@ -166,10 +167,9 @@ public class PlanServiceImpl implements PlanService {
 
         return userRepository.findByEmail(auth.getName()).orElse(null);
     }
+    private final AuthorizationService authorizationService;
 
     private boolean isSuperAdmin(User user) {
-        return user != null
-                && user.getEmail() != null
-                && user.getEmail().equalsIgnoreCase("admin@blute.co.in");
+        return authorizationService.isSuperAdmin(user);
     }
 }
