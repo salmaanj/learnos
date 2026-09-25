@@ -14,7 +14,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: false
     properties:
       hibernate:
@@ -94,5 +94,5 @@ logging:
 
 storage:
   local:
-    base-path: C:/Projects/LearnOS/learnos-backend/uploads
+    base-path: uploads
     base-url: http://localhost:8080/api/v1/files

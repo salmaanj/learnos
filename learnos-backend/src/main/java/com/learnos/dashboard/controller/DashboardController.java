@@ -2,6 +2,7 @@ package com.learnos.dashboard.controller;
 
 import com.learnos.auth.model.User;
 import com.learnos.auth.repository.UserRepository;
+import com.learnos.auth.service.AuthorizationService;
 import com.learnos.coursepayment.model.CoursePaymentStatus;
 import com.learnos.coursepayment.repository.CoursePaymentRepository;
 import com.learnos.subscription.entity.SubscriptionStatus;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 public class DashboardController {
 
     private final UserRepository userRepository;
+    private final AuthorizationService authorizationService;
     private final CoursePaymentRepository coursePaymentRepository;
     private final CompanySubscriptionRepository
             companySubscriptionRepository;
@@ -83,10 +85,6 @@ public class DashboardController {
     }
 
     private boolean isSuperAdmin(User user) {
-        return user != null
-                && user.getEmail() != null
-                && user.getEmail().equalsIgnoreCase(
-                "admin@blute.co.in"
-        );
+        return authorizationService.isSuperAdmin(user);
     }
 }
