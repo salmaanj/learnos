@@ -7,5 +7,8 @@ public record UserResponse(
         String firstName,
         String lastName,
         String email,
-        String role
-) {}
+        String role,
+        String phone,
+        String status
+) {
+}

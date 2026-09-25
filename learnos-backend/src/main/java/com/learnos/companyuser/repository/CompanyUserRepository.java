@@ -4,6 +4,7 @@ import com.learnos.companyuser.entity.CompanyUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 public interface CompanyUserRepository extends JpaRepository<CompanyUser, UUID> {
@@ -15,4 +16,6 @@ public interface CompanyUserRepository extends JpaRepository<CompanyUser, UUID> 
             String role,
             String status
     );
+
+    Optional<CompanyUser> findByUser_Id(UUID userId);
 }
