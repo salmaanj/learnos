@@ -13,7 +13,6 @@ class LiveClassService {
     );
 
     final payload = response.data;
-
     final dynamic rawItems;
 
     if (payload is List) {
@@ -36,9 +35,9 @@ class LiveClassService {
         .whereType<Map>()
         .map(
           (item) => LiveClassModel.fromJson(
-        Map<String, dynamic>.from(item),
-      ),
-    )
+            Map<String, dynamic>.from(item),
+          ),
+        )
         .toList();
   }
 

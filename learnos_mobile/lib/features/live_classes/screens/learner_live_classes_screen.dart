@@ -62,7 +62,8 @@ class _LearnerLiveClassesScreenState
       final meetingUrl = await _service.joinClass(liveClass.id);
       final uri = Uri.tryParse(meetingUrl);
 
-      if (uri == null || !(uri.scheme == 'http' || uri.scheme == 'https')) {
+      if (uri == null ||
+          !(uri.scheme == 'http' || uri.scheme == 'https')) {
         throw Exception('Invalid meeting URL.');
       }
 
@@ -143,28 +144,30 @@ class _LearnerLiveClassesScreenState
                   ),
                 )
               else if (_classes.isEmpty)
-                  const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _MessageState(
-                      icon: Icons.video_camera_front_outlined,
-                      message: 'No upcoming live classes.',
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    sliver: SliverList.separated(
-                      itemCount: _classes.length,
-                      separatorBuilder: (_, __) =>
-                      const SizedBox(height: 14),
-                      itemBuilder: (context, index) {
-                        return _LiveClassCard(
-                          liveClass: _classes[index],
-                          onJoin: () => _joinClass(_classes[index]),
-                        );
-                      },
-                    ),
+                const SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: _MessageState(
+                    icon: Icons.video_camera_front_outlined,
+                    message: 'No upcoming live classes.',
                   ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  sliver: SliverList.separated(
+                    itemCount: _classes.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: 14),
+                    itemBuilder: (context, index) {
+                      final liveClass = _classes[index];
+
+                      return _LiveClassCard(
+                        liveClass: liveClass,
+                        onJoin: () => _joinClass(liveClass),
+                      );
+                    },
+                  ),
+                ),
             ],
           ),
         ),
@@ -185,8 +188,6 @@ class _LiveClassCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final start = liveClass.scheduledAt;
-    final date = _formatDate(start);
-    final time = _formatTime(start);
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -258,11 +259,11 @@ class _LiveClassCard extends StatelessWidget {
             children: [
               _InfoChip(
                 icon: Icons.calendar_today_outlined,
-                label: date,
+                label: _formatDate(start),
               ),
               _InfoChip(
                 icon: Icons.schedule_rounded,
-                label: time,
+                label: _formatTime(start),
               ),
               _InfoChip(
                 icon: Icons.timer_outlined,
@@ -317,15 +318,16 @@ class _LiveClassCard extends StatelessWidget {
       'Dec',
     ];
 
-    return '${dateTime.day} ${months[dateTime.month - 1]} ${dateTime.year}';
+    return '${dateTime.day} ${months[dateTime.month - 1]} '
+        '${dateTime.year}';
   }
 
   static String _formatTime(DateTime dateTime) {
     final hour = dateTime.hour == 0
         ? 12
         : dateTime.hour > 12
-        ? dateTime.hour - 12
-        : dateTime.hour;
+            ? dateTime.hour - 12
+            : dateTime.hour;
 
     final minute = dateTime.minute.toString().padLeft(2, '0');
     final suffix = dateTime.hour >= 12 ? 'PM' : 'AM';

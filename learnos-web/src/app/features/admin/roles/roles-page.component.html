@@ -1,0 +1,294 @@
+<section class="roles-page">
+  <header class="page-header">
+    <div>
+      <p class="eyebrow">Administration</p>
+      <h1>Roles</h1>
+      <p class="subtitle">
+        Manage role access and permissions
+        for your organization.
+      </p>
+    </div>
+
+    <button
+      class="primary-button"
+      type="button"
+      (click)="startCreate()"
+    >
+      + Add role
+    </button>
+  </header>
+
+  @if (successMessage) {
+    <div class="message success">
+      {{ successMessage }}
+    </div>
+  }
+
+  @if (errorMessage) {
+    <div class="message error">
+      {{ errorMessage }}
+    </div>
+  }
+
+  <div class="content-grid">
+    <section class="panel roles-panel">
+      <div class="panel-header">
+        <div>
+          <h2>Available roles</h2>
+          <span>
+            {{ roles.length }}
+            role{{ roles.length === 1 ? '' : 's' }}
+          </span>
+        </div>
+
+        <button
+          class="text-button"
+          type="button"
+          (click)="loadPage()"
+          [disabled]="loading"
+        >
+          Refresh
+        </button>
+      </div>
+
+      @if (loading) {
+        <div class="empty-state">
+          Loading roles…
+        </div>
+      } @else if (!roles.length) {
+        <div class="empty-state">
+          No roles found.
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Role</th>
+                <th>Description</th>
+                <th>Permissions</th>
+                <th>Type</th>
+                <th class="actions-heading">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              @for (
+                role of roles;
+                track trackById($index, role)
+              ) {
+                <tr
+                  [class.selected]="
+                    editingRole?.id === role.id
+                  "
+                >
+                  <td>
+                    <div class="role-name">
+                      {{ role.name }}
+                    </div>
+                  </td>
+
+                  <td>
+                    {{ role.description || '—' }}
+                  </td>
+
+                  <td>
+                    <div class="permission-list">
+                      @for (
+                        permission of role.permissions;
+                        track permission
+                      ) {
+                        <span class="permission-chip">
+                          {{ permission }}
+                        </span>
+                      } @empty {
+                        <span class="muted">
+                          No permissions
+                        </span>
+                      }
+                    </div>
+                  </td>
+
+                  <td>
+                    <span
+                      class="type-badge"
+                      [class.system]="role.systemRole"
+                    >
+                      {{
+                        role.systemRole
+                          ? 'System'
+                          : 'Custom'
+                      }}
+                    </span>
+                  </td>
+
+                  <td class="actions">
+                    <div class="action-buttons">
+                      <button
+                        class="action-button edit-button"
+                        type="button"
+                        (click)="startEdit(role)"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        class="action-button delete-button"
+                        type="button"
+                        [disabled]="role.systemRole"
+                        [title]="
+                          role.systemRole
+                            ? 'System roles cannot be deleted'
+                            : 'Delete role'
+                        "
+                        (click)="deleteRole(role)"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    </section>
+
+    <section class="panel form-panel">
+      <div class="panel-header">
+        <div>
+          <h2>
+            {{
+              editingRole
+                ? 'Edit role'
+                : 'Create role'
+            }}
+          </h2>
+
+          <span>
+            {{
+              editingRole
+                ? 'Update access for this role.'
+                : 'Add a custom role.'
+            }}
+          </span>
+        </div>
+      </div>
+
+      <form
+        [formGroup]="roleForm"
+        (ngSubmit)="save()"
+        novalidate
+      >
+        <label for="role-name">
+          Name
+        </label>
+
+        <input
+          id="role-name"
+          type="text"
+          formControlName="name"
+          placeholder="e.g. CONTENT_MANAGER"
+        />
+
+        @if (
+          roleForm.controls.name.touched
+          && roleForm.controls.name.invalid
+        ) {
+          <small class="field-error">
+            Role name is required.
+          </small>
+        }
+
+        <label for="role-description">
+          Description
+        </label>
+
+        <textarea
+          id="role-description"
+          rows="4"
+          formControlName="description"
+          placeholder="Describe what this role can do"
+        ></textarea>
+
+        <div class="permissions-heading">
+          <label>Permissions</label>
+
+          <span>
+            {{
+              roleForm.controls.permissionIds
+                .value.length
+            }}
+            selected
+          </span>
+        </div>
+
+        <div class="permissions-list">
+          @for (
+            permission of permissions;
+            track trackById($index, permission)
+          ) {
+            <label class="permission-option">
+              <input
+                type="checkbox"
+                [checked]="
+                  isPermissionSelected(
+                    permission.id
+                  )
+                "
+                (change)="togglePermission(
+                  permission.id,
+                  $any($event.target).checked
+                )"
+              />
+
+              <span>
+                <strong>
+                  {{ permission.code }}
+                </strong>
+
+                <small>
+                  {{
+                    permission.description
+                      || 'No description'
+                  }}
+                </small>
+              </span>
+            </label>
+          } @empty {
+            <p class="muted">
+              No permissions available.
+            </p>
+          }
+        </div>
+
+        <div class="form-actions">
+          @if (editingRole) {
+            <button
+              class="secondary-button"
+              type="button"
+              (click)="cancelEdit()"
+            >
+              Cancel
+            </button>
+          }
+
+          <button
+            class="primary-button"
+            type="submit"
+            [disabled]="saving"
+          >
+            {{
+              saving
+                ? 'Saving…'
+                : editingRole
+                  ? 'Update role'
+                  : 'Create role'
+            }}
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
+</section>

@@ -1,642 +1,149 @@
 <div class="page">
   <div class="page-header">
     <div>
-      <a routerLink="/admin/courses" class="back-link">
-        &larr; All Courses
-      </a>
-
+      <a routerLink="/admin/courses" class="back-link">&larr; All Courses</a>
       <h2>{{ courseTitle || 'Course Content' }}</h2>
-
-      <p class="step-hint">
-        Step 2 of 2: add modules, then add lessons inside each module.
-      </p>
+      <p class="step-hint">Step 2 of 2: add modules, then add lessons inside each module.</p>
     </div>
-
-    <a
-      class="btn btn-outline"
-      [routerLink]="['/admin/courses', courseId, 'edit']"
-    >
-      Edit Course Details
-    </a>
+    <a class="btn btn-outline" [routerLink]="['/admin/courses', courseId, 'edit']">Edit Course Details</a>
   </div>
 
-  <div class="error" *ngIf="error">
-    {{ error }}
-  </div>
-
-  <div *ngIf="loading" class="state-message">
-    Loading modules…
-  </div>
+  <div class="error" *ngIf="error">{{ error }}</div>
+  <div *ngIf="loading" class="state-message">Loading modules…</div>
 
   <ng-container *ngIf="!loading">
-    <div
-      class="state-message"
-      *ngIf="modules.length === 0 && !showModuleForm"
-    >
-      This course has no modules yet. Modules are how you group lessons — for
-      example, “Module 1: Getting Started”. Add your first module below.
+    <div class="state-message" *ngIf="modules.length === 0 && !showModuleForm">
+      This course has no modules yet. Modules are how you group lessons — for example, “Module 1: Getting Started”. Add your first module below.
     </div>
 
     <div class="module-card" *ngFor="let module of modules">
       <div class="module-header" (click)="toggleModule(module)">
         <div class="module-title-block">
-          <span class="expand-icon">
-            {{ module.expanded ? '▾' : '▸' }}
-          </span>
-
+          <span class="expand-icon">{{ module.expanded ? '▾' : '▸' }}</span>
           <strong>{{ module.title }}</strong>
-
-          <span class="muted">
-            {{ module.lessons?.length || 0 }} lesson(s)
-          </span>
+          <span class="muted">{{ module.lessons?.length || 0 }} lesson(s)</span>
         </div>
-
         <div class="module-actions">
-          <button
-            type="button"
-            class="btn btn-outline btn-sm"
-            (click)="openNewLessonForm(module, $event)"
-          >
-            + Add Lesson
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-outline btn-sm"
-            (click)="startEditModule(module, $event)"
-          >
-            Edit
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-danger btn-sm"
-            (click)="deleteModule(module, $event)"
-          >
-            Delete
-          </button>
+          <button type="button" class="btn btn-outline btn-sm" (click)="openNewLessonForm(module, $event)">+ Add Lesson</button>
+          <button type="button" class="btn btn-outline btn-sm" (click)="startEditModule(module, $event)">Edit</button>
+          <button type="button" class="btn btn-danger btn-sm" (click)="deleteModule(module, $event)">Delete</button>
         </div>
       </div>
 
       <div class="module-body" *ngIf="module.expanded">
-        <p class="muted module-desc" *ngIf="module.description">
-          {{ module.description }}
-        </p>
+        <p class="muted module-desc" *ngIf="module.description">{{ module.description }}</p>
 
         <div class="lesson-row" *ngFor="let lesson of module.lessons">
           <div class="lesson-info">
-            <span class="lesson-type-badge">
-              {{ lesson.type }}
-            </span>
-
+            <span class="lesson-type-badge">{{ lesson.type }}</span>
             <strong>{{ lesson.title }}</strong>
-
-            <span
-              class="muted"
-              *ngIf="
-                lesson.published !== true &&
-                lesson.isPublished !== true
-              "
-            >
-              (unpublished)
-            </span>
-
-            <span
-              class="lesson-file-name"
-              *ngIf="lesson.originalFileName"
-            >
-              {{ lesson.originalFileName }}
-            </span>
+            <span class="downloadable-badge" *ngIf="lesson.downloadable === true || lesson.isDownloadable === true">Downloadable</span>
+            <span class="muted" *ngIf="lesson.published !== true && lesson.isPublished !== true">(unpublished)</span>
+            <span class="lesson-file-name" *ngIf="lesson.originalFileName">{{ lesson.originalFileName }}</span>
           </div>
-
           <div class="lesson-actions">
-            <button
-              type="button"
-              class="btn btn-outline btn-sm"
-              (click)="startEditLesson(module, lesson, $event)"
-            >
-              Edit
-            </button>
-
-            <button
-              type="button"
-              class="btn btn-danger btn-sm"
-              (click)="deleteLesson(module, lesson, $event)"
-            >
-              Delete
-            </button>
+            <button type="button" class="btn btn-outline btn-sm" (click)="startEditLesson(module, lesson, $event)">Edit</button>
+            <button type="button" class="btn btn-danger btn-sm" (click)="deleteLesson(module, lesson, $event)">Delete</button>
           </div>
         </div>
 
-        <div
-          class="muted empty-lessons"
-          *ngIf="!module.lessons || module.lessons.length === 0"
-        >
-          No lessons in this module yet. Click “+ Add Lesson” above.
-        </div>
+        <div class="muted empty-lessons" *ngIf="!module.lessons || module.lessons.length === 0">No lessons in this module yet. Click “+ Add Lesson” above.</div>
 
-        <form
-          class="lesson-form"
-          *ngIf="lessonFormModuleId === module.id"
-          [formGroup]="lessonForm"
-          (ngSubmit)="submitLesson()"
-        >
-          <div class="sec-hd">
-            <span class="sec-title">
-              {{ editingLessonId ? 'Edit Lesson' : 'New Lesson' }}
-            </span>
-          </div>
+        <form class="lesson-form" *ngIf="lessonFormModuleId === module.id" [formGroup]="lessonForm" (ngSubmit)="submitLesson()">
+          <div class="sec-hd"><span class="sec-title">{{ editingLessonId ? 'Edit Lesson' : 'New Lesson' }}</span></div>
 
           <div class="lesson-type-guide">
             <strong>Content type guide</strong>
-
-            <span>
-              VIDEO: MP4/MOV/WebM · AUDIO: MP3/WAV/M4A · PDF: PDF document ·
-              SLIDES: PDF only (convert PPT/PPTX to PDF first) · TEXT: typed
-              content only.
-            </span>
+            <span>VIDEO: MP4/MOV/WebM · AUDIO: MP3/WAV/M4A · PDF: PDF document · SLIDES: PDF only · TEXT: typed content only.</span>
           </div>
 
           <div class="content-source-section">
-            <label class="content-source-label">
-              Lesson content source
-            </label>
-
+            <label class="content-source-label">Lesson content source</label>
             <div class="content-source-options">
               <label class="source-option">
-                <input
-                  type="radio"
-                  name="lessonSource"
-                  [checked]="lessonSource === 'UPLOAD'"
-                  [disabled]="!!editingLessonId"
-                  (change)="setLessonSource('UPLOAD')"
-                />
-
-                <span>
-                  Upload a new file
-                </span>
+                <input type="radio" name="lessonSource" [checked]="lessonSource === 'UPLOAD'" [disabled]="!!editingLessonId" (change)="setLessonSource('UPLOAD')" />
+                <span>Upload a new file</span>
               </label>
-
               <label class="source-option">
-                <input
-                  type="radio"
-                  name="lessonSource"
-                  [checked]="lessonSource === 'LIBRARY'"
-                  [disabled]="!!editingLessonId"
-                  (change)="setLessonSource('LIBRARY')"
-                />
-
-                <span>
-                  Choose from Content Library
-                </span>
+                <input type="radio" name="lessonSource" [checked]="lessonSource === 'LIBRARY'" [disabled]="!!editingLessonId" (change)="setLessonSource('LIBRARY')" />
+                <span>Choose from Content Library</span>
               </label>
             </div>
-
-            <small
-              class="source-note"
-              *ngIf="editingLessonId"
-            >
-              Existing lessons keep their current source. You can update their
-              title, description, URLs, preview, publish status, or upload a
-              replacement file.
-            </small>
+            <small class="source-note" *ngIf="editingLessonId">Existing lessons keep their current source. You can update their title, description, URLs, preview, publish status, download status, or upload a replacement file.</small>
           </div>
 
-          <div
-            *ngIf="lessonSource === 'LIBRARY'"
-            class="library-picker"
-          >
-            <div
-              *ngIf="selectedLibraryItem"
-              class="library-selection"
-            >
-              <div class="library-selection-icon">
-                {{
-                  libraryTypeIcon(
-                    selectedLibraryItem.type
-                  )
-                }}
-              </div>
-
+          <div *ngIf="lessonSource === 'LIBRARY'" class="library-picker">
+            <div *ngIf="selectedLibraryItem" class="library-selection">
+              <div class="library-selection-icon">{{ libraryTypeIcon(selectedLibraryItem.type) }}</div>
               <div class="library-selection-main">
-                <span>
-                  Using Content Library item
-                </span>
-
-                <strong>
-                  {{ selectedLibraryItem.title }}
-                </strong>
-
-                <small>
-                  {{
-                    libraryTypeLabel(
-                      selectedLibraryItem.type
-                    )
-                  }}
-                  <ng-container
-                    *ngIf="selectedLibraryItem.originalFileName"
-                  >
-                    · {{ selectedLibraryItem.originalFileName }}
-                  </ng-container>
-                </small>
+                <span>Using Content Library item</span>
+                <strong>{{ selectedLibraryItem.title }}</strong>
+                <small>{{ libraryTypeLabel(selectedLibraryItem.type) }}<ng-container *ngIf="selectedLibraryItem.originalFileName"> · {{ selectedLibraryItem.originalFileName }}</ng-container></small>
               </div>
-
-              <button
-                type="button"
-                class="btn btn-outline btn-sm"
-                (click)="clearLibrarySelection()"
-              >
-                Change
-              </button>
+              <button type="button" class="btn btn-outline btn-sm" (click)="clearLibrarySelection()">Change</button>
             </div>
 
             <ng-container *ngIf="!selectedLibraryItem">
               <div class="library-picker-toolbar">
-                <input
-                  #librarySearchInput
-                  type="search"
-                  class="library-search-input"
-                  placeholder="Search Content Library..."
-                  [value]="librarySearchTerm"
-                  (input)="
-                    librarySearchTerm =
-                      librarySearchInput.value;
-                    onLibrarySearchChange()
-                  "
-                />
-
-                <select
-                  class="library-type-select"
-                  [(ngModel)]="librarySelectedType"
-                  [ngModelOptions]="{ standalone: true }"
-                  (ngModelChange)="onLibraryTypeChange()"
-                >
-                  <option value="">
-                    All types
-                  </option>
-
-                  <option
-                    *ngFor="let type of libraryTypes"
-                    [value]="type"
-                  >
-                    {{ libraryTypeLabel(type) }}
-                  </option>
+                <input #librarySearchInput type="search" class="library-search-input" placeholder="Search Content Library..." [value]="librarySearchTerm" (input)="librarySearchTerm = librarySearchInput.value; onLibrarySearchChange()" />
+                <select class="library-type-select" [(ngModel)]="librarySelectedType" [ngModelOptions]="{ standalone: true }" (ngModelChange)="onLibraryTypeChange()">
+                  <option value="">All types</option>
+                  <option *ngFor="let type of libraryTypes" [value]="type">{{ libraryTypeLabel(type) }}</option>
                 </select>
               </div>
-
-              <div
-                *ngIf="libraryLoading"
-                class="library-picker-state"
-              >
-                Loading Content Library…
-              </div>
-
-              <div
-                *ngIf="!libraryLoading && libraryError"
-                class="library-picker-error"
-              >
-                {{ libraryError }}
-              </div>
-
-              <div
-                *ngIf="
-                  !libraryLoading &&
-                  !libraryError &&
-                  libraryItems.length === 0
-                "
-                class="library-picker-state"
-              >
-                No active Content Library items match your search.
-              </div>
-
-              <div
-                *ngIf="
-                  !libraryLoading &&
-                  !libraryError &&
-                  libraryItems.length > 0
-                "
-                class="library-item-list"
-              >
-                <div
-                  *ngFor="let item of libraryItems"
-                  class="library-item-option"
-                  [class.unsupported-library-item]="
-                    !(
-                      item.type === 'VIDEO' ||
-                      item.type === 'AUDIO' ||
-                      item.type === 'PDF' ||
-                      item.type === 'SLIDES'
-                    )
-                  "
-                >
-                  <div class="library-item-icon">
-                    {{ libraryTypeIcon(item.type) }}
-                  </div>
-
+              <div *ngIf="libraryLoading" class="library-picker-state">Loading Content Library…</div>
+              <div *ngIf="!libraryLoading && libraryError" class="library-picker-error">{{ libraryError }}</div>
+              <div *ngIf="!libraryLoading && !libraryError && libraryItems.length === 0" class="library-picker-state">No active Content Library items match your search.</div>
+              <div *ngIf="!libraryLoading && !libraryError && libraryItems.length > 0" class="library-item-list">
+                <div *ngFor="let item of libraryItems" class="library-item-option">
+                  <div class="library-item-icon">{{ libraryTypeIcon(item.type) }}</div>
                   <div class="library-item-details">
-                    <div class="library-item-topline">
-                      <strong>
-                        {{ item.title }}
-                      </strong>
-
-                      <span>
-                        {{ libraryTypeLabel(item.type) }}
-                      </span>
-                    </div>
-
-                    <p>
-                      {{
-                        item.description ||
-                        'No description added.'
-                      }}
-                    </p>
-
-                    <small>
-                      {{
-                        item.originalFileName ||
-                        item.contentUrl ||
-                        'No file name'
-                      }}
-                    </small>
+                    <div class="library-item-topline"><strong>{{ item.title }}</strong><span>{{ libraryTypeLabel(item.type) }}</span></div>
+                    <p>{{ item.description || 'No description added.' }}</p>
+                    <small>{{ item.originalFileName || item.contentUrl || 'No file name' }}</small>
                   </div>
-
-                  <button
-                    type="button"
-                    class="library-use-button"
-                    [disabled]="
-                      !(
-                        item.type === 'VIDEO' ||
-                        item.type === 'AUDIO' ||
-                        item.type === 'PDF' ||
-                        item.type === 'SLIDES'
-                      ) ||
-                      (!item.contentUrl && !item.streamingUrl)
-                    "
-                    (click)="selectLibraryItem(item)"
-                  >
-                    Use this
-                  </button>
+                  <button type="button" class="library-use-button" [disabled]="!(item.type === 'VIDEO' || item.type === 'AUDIO' || item.type === 'PDF' || item.type === 'SLIDES') || (!item.contentUrl && !item.streamingUrl)" (click)="selectLibraryItem(item)">Use this</button>
                 </div>
               </div>
             </ng-container>
           </div>
 
           <div class="form-row">
-            <div class="field">
-              <label>Lesson title</label>
-
-              <input
-                type="text"
-                formControlName="title"
-                placeholder="Example: Introduction to Flutter"
-              />
-            </div>
-
-            <div class="field">
-              <label>Lesson type</label>
-
-              <select
-                formControlName="type"
-                [disabled]="lessonSource === 'LIBRARY'"
-                (change)="onTypeChange($any($event.target).value)"
-              >
-                <option
-                  *ngFor="let type of lessonTypes"
-                  [value]="type"
-                >
-                  {{ type }}
-                </option>
-              </select>
-            </div>
+            <div class="field"><label>Lesson title</label><input type="text" formControlName="title" placeholder="Example: Introduction to Flutter" /></div>
+            <div class="field"><label>Lesson type</label><select formControlName="type" [disabled]="lessonSource === 'LIBRARY'" (change)="onTypeChange($any($event.target).value)"><option *ngFor="let type of lessonTypes" [value]="type">{{ type }}</option></select></div>
           </div>
 
-          <div class="lesson-type-hint">
-            {{ lessonTypeHint }}
-          </div>
+          <div class="lesson-type-hint">{{ lessonTypeHint }}</div>
+          <div class="field field-full"><label>Lesson description</label><textarea class="text-input" formControlName="description" placeholder="A short explanation of this lesson."></textarea></div>
 
-          <div class="field field-full">
-            <label>Lesson description</label>
+          <div class="field field-full" *ngIf="showTextContent"><label>Text content</label><textarea class="text-input text-content-editor" formControlName="textContent" placeholder="Write or paste the lesson content here."></textarea></div>
 
-            <textarea
-              class="text-input"
-              formControlName="description"
-              placeholder="A short explanation of this lesson."
-            ></textarea>
-          </div>
-
-          <div
-            class="field field-full"
-            *ngIf="showTextContent"
-          >
-            <label>Text content</label>
-
-            <textarea
-              class="text-input text-content-editor"
-              formControlName="textContent"
-              placeholder="Write or paste the lesson content here."
-            ></textarea>
-          </div>
-
-          <div
-            class="field field-full"
-            *ngIf="showFileUpload"
-          >
-            <label>
-              Upload {{ selectedLessonType }} file
-            </label>
-
-            <input
-              type="file"
-              (change)="onLessonFileChange($event)"
-              [accept]="acceptTypes"
-            />
-
-            <div
-              class="muted"
-              *ngIf="selectedLessonFile"
-            >
-              Selected: {{ selectedLessonFile.name }}
-            </div>
-
-            <div
-              class="muted"
-              *ngIf="
-                !selectedLessonFile &&
-                currentLessonFileName
-              "
-            >
-              Current file: {{ currentLessonFileName }}
-            </div>
+          <div class="field field-full" *ngIf="showFileUpload">
+            <label>Upload {{ selectedLessonType }} file</label>
+            <input type="file" (change)="onLessonFileChange($event)" [accept]="acceptTypes" />
+            <div class="muted" *ngIf="selectedLessonFile">Selected: {{ selectedLessonFile.name }}</div>
+            <div class="muted" *ngIf="!selectedLessonFile && currentLessonFileName">Current file: {{ currentLessonFileName }}</div>
           </div>
 
           <div class="form-row">
-            <div class="field">
-              <label>Duration (minutes)</label>
-
-              <input
-                type="number"
-                min="0"
-                formControlName="durationMinutes"
-                placeholder="Optional"
-              />
-            </div>
-
-            <div class="field">
-              <label>Display order</label>
-
-              <input
-                type="number"
-                min="0"
-                formControlName="displayOrder"
-              />
-            </div>
+            <div class="field"><label>Duration (minutes)</label><input type="number" min="0" formControlName="durationMinutes" placeholder="Optional" /></div>
+            <div class="field"><label>Display order</label><input type="number" min="0" formControlName="displayOrder" /></div>
           </div>
 
           <div class="form-row check-row">
-            <label class="check-inline">
-              <input
-                type="checkbox"
-                formControlName="isPreview"
-              />
-
-              <span>
-                Free preview before enrollment
-              </span>
-            </label>
-
-            <label class="check-inline">
-              <input
-                type="checkbox"
-                formControlName="isPublished"
-              />
-
-              <span>
-                Published and visible to learners
-              </span>
-            </label>
+            <label class="check-inline"><input type="checkbox" formControlName="isPreview" /><span>Free preview before enrollment</span></label>
+            <label class="check-inline"><input type="checkbox" formControlName="isPublished" /><span>Published and visible to learners</span></label>
+            <label class="check-inline"><input type="checkbox" formControlName="downloadable" /><span>Downloadable for learners</span></label>
           </div>
 
           <div class="form-actions">
-            <button
-              type="submit"
-              class="btn btn-primary"
-              [disabled]="lessonSubmitting"
-            >
-              {{
-                lessonSubmitting
-                  ? 'Saving…'
-                  : editingLessonId
-                    ? 'Save Lesson'
-                    : 'Add Lesson'
-              }}
-            </button>
-
-            <button
-              type="button"
-              class="btn btn-outline"
-              (click)="cancelLessonForm()"
-            >
-              Cancel
-            </button>
+            <button type="submit" class="btn btn-primary" [disabled]="lessonSubmitting">{{ lessonSubmitting ? 'Saving…' : editingLessonId ? 'Save Lesson' : 'Add Lesson' }}</button>
+            <button type="button" class="btn btn-outline" (click)="cancelLessonForm()">Cancel</button>
           </div>
         </form>
       </div>
     </div>
 
-    <div
-      class="card module-form-card"
-      *ngIf="showModuleForm"
-    >
-      <div class="sec-hd">
-        <span class="sec-title">
-          {{
-            editingModuleId
-              ? 'Edit Module'
-              : 'New Module'
-          }}
-        </span>
-      </div>
-
-      <form
-        [formGroup]="moduleForm"
-        (ngSubmit)="submitModules()"
-      >
-        <div class="form-row">
-          <div class="field">
-            <label>Module title</label>
-
-            <input
-              type="text"
-              formControlName="title"
-              placeholder="Example: Module 1 — Getting Started"
-            />
-          </div>
-
-          <div class="field">
-            <label>Display order</label>
-
-            <input
-              type="number"
-              min="0"
-              formControlName="displayOrder"
-            />
-          </div>
-        </div>
-
-        <div class="field field-full">
-          <label>Module description</label>
-
-          <textarea
-            class="text-input"
-            formControlName="description"
-            placeholder="Optional module summary."
-          ></textarea>
-        </div>
-
-        <label class="check-inline">
-          <input
-            type="checkbox"
-            formControlName="isPreview"
-          />
-
-          <span>
-            Preview module visible before enrollment
-          </span>
-        </label>
-
-        <div class="form-actions">
-          <button
-            type="submit"
-            class="btn btn-primary"
-            [disabled]="moduleSubmitting"
-          >
-            {{
-              moduleSubmitting
-                ? 'Saving…'
-                : editingModuleId
-                  ? 'Save Module'
-                  : 'Add Module'
-            }}
-          </button>
-
-          <button
-            type="button"
-            class="btn btn-outline"
-            (click)="cancelModuleForm()"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-    </div>
-
-    <button
-      type="button"
-      class="btn btn-primary add-module-btn"
-      *ngIf="!showModuleForm"
-      (click)="openNewModuleForm()"
-    >
-      + Add Module
-    </button>
-  </ng-container>
-</div>
+    <div class="card module-form-card" *ngIf="showModuleForm">
+      <div class="sec-hd"><span class="sec-title">{{ editingModuleId ? 'Edit Module' : 'New Module' }}</span></div>
+      <form [formGroup]="moduleForm" (ngSubmit)="submitModules()">

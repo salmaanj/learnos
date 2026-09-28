@@ -1,6 +1,13 @@
-import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import {
+  Injectable
+} from '@angular/core';
+import {
+  HttpClient,
+  HttpHeaders
+} from '@angular/common/http';
+import {
+  Observable
+} from 'rxjs';
 
 export interface CompanyUser {
   id: string;
@@ -20,12 +27,17 @@ export interface CompanyUser {
   providedIn: 'root'
 })
 export class CompanyUsersService {
-  private readonly baseUrl = 'http://localhost:8080/api/v1/company-users';
+  private readonly baseUrl =
+    'http://localhost:8080/api/v1/company-users';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient
+  ) {}
 
   private headers(): HttpHeaders {
-    const token = localStorage.getItem('accessToken') || '';
+    const token =
+      localStorage.getItem('accessToken') || '';
+
     return new HttpHeaders({
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json'
@@ -33,22 +45,46 @@ export class CompanyUsersService {
   }
 
   getUsers(): Observable<CompanyUser[]> {
-    return this.http.get<CompanyUser[]>(this.baseUrl, { headers: this.headers() });
+    return this.http.get<CompanyUser[]>(
+      this.baseUrl,
+      { headers: this.headers() }
+    );
   }
 
-  getUserById(id: string): Observable<CompanyUser> {
-    return this.http.get<CompanyUser>(`${this.baseUrl}/${id}`, { headers: this.headers() });
+  getUserById(
+    id: string
+  ): Observable<CompanyUser> {
+    return this.http.get<CompanyUser>(
+      `${this.baseUrl}/${id}`,
+      { headers: this.headers() }
+    );
   }
 
-  createUser(payload: any): Observable<CompanyUser> {
-    return this.http.post<CompanyUser>(this.baseUrl, payload, { headers: this.headers() });
+  createUser(
+    payload: Record<string, unknown>
+  ): Observable<CompanyUser> {
+    return this.http.post<CompanyUser>(
+      this.baseUrl,
+      payload,
+      { headers: this.headers() }
+    );
   }
 
-  updateUser(id: string, payload: any): Observable<CompanyUser> {
-    return this.http.put<CompanyUser>(`${this.baseUrl}/${id}`, payload, { headers: this.headers() });
+  updateUser(
+    id: string,
+    payload: Record<string, unknown>
+  ): Observable<CompanyUser> {
+    return this.http.put<CompanyUser>(
+      `${this.baseUrl}/${id}`,
+      payload,
+      { headers: this.headers() }
+    );
   }
 
   deleteUser(id: string): Observable<void> {
-    return this.http.delete<void>(`${this.baseUrl}/${id}`, { headers: this.headers() });
+    return this.http.delete<void>(
+      `${this.baseUrl}/${id}`,
+      { headers: this.headers() }
+    );
   }
 }

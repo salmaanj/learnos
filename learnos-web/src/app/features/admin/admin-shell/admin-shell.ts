@@ -50,6 +50,17 @@ export class AdminShell implements OnInit {
       ]
     },
     {
+      section: 'Administration',
+      superAdminOnly: true,
+      items: [
+        {
+          label: 'Roles',
+          route: '/admin/roles',
+          exact: true
+        }
+      ]
+    },
+    {
       section: 'Courses',
       items: [
         {
@@ -194,6 +205,10 @@ export class AdminShell implements OnInit {
       || email === 'admin@blute.co.in';
   }
 
+  get canViewRoles(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
   get canViewMyLiveClasses(): boolean {
     return this.getResolvedRole() === 'TUTOR';
   }
@@ -211,12 +226,19 @@ export class AdminShell implements OnInit {
       return false;
     }
 
+    if (label === 'Roles') {
+      return this.canViewRoles;
+    }
+
     if (label === 'My Live Classes') {
       return this.canViewMyLiveClasses;
     }
 
     if (label === 'Plans') {
-      return true;
+      const role = this.getResolvedRole();
+
+      return role === 'SUPER_ADMIN'
+        || role === 'ADMIN';
     }
 
     return true;
@@ -286,7 +308,8 @@ export class AdminShell implements OnInit {
       || ''
     )
       .trim()
-      .toUpperCase();
+      .toUpperCase()
+      .replace(/[- ]/g, '_');
   }
 
   private loadCurrentUser(): void {
@@ -307,7 +330,8 @@ export class AdminShell implements OnInit {
       || ''
     )
       .trim()
-      .toUpperCase();
+      .toUpperCase()
+      .replace(/[- ]/g, '_');
 
     this.userName =
       this.authService.getUserName();
@@ -323,6 +347,11 @@ export class AdminShell implements OnInit {
     const url = this.router.url;
 
     if (this.isLearnerFormRoute(url)) {
+      this.clearTopAction();
+      return;
+    }
+
+    if (url.startsWith('/admin/roles')) {
       this.clearTopAction();
       return;
     }
@@ -386,6 +415,11 @@ export class AdminShell implements OnInit {
 
   private updatePageTitle(): void {
     const url = this.router.url;
+
+    if (url.startsWith('/admin/roles')) {
+      this.pageTitle = 'Roles';
+      return;
+    }
 
     if (url.startsWith('/admin/tutor-live-classes')) {
       this.pageTitle = 'My Live Classes';

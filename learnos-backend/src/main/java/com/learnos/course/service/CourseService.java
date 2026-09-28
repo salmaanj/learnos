@@ -951,6 +951,7 @@ public class CourseService {
                 .durationSeconds(request.getDurationSeconds())
                 .isPreview(request.isPreview())
                 .isPublished(request.isPublished())
+                .downloadable(request.isDownloadable())
                 .displayOrder(request.getDisplayOrder())
                 .build();
 
@@ -1537,6 +1538,7 @@ public class CourseService {
                 .order(lesson.getDisplayOrder())
                 .isPreview(lesson.isPreview())
                 .isPublished(lesson.isPublished())
+                .downloadable(lesson.isDownloadable())
                 .moduleId(
                         lesson.getModule() != null
                                 ? lesson.getModule().getId()

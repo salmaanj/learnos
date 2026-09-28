@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import {
   ReactiveFormsModule,
@@ -7,11 +7,21 @@ import {
   AbstractControl,
   ValidationErrors
 } from '@angular/forms';
-import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import {
+  ActivatedRoute,
+  Router,
+  RouterModule
+} from '@angular/router';
 import { CompanyUsersService } from './company-users.service';
 import { AuthService } from '../../../core/auth.service';
+import {
+  Role,
+  RoleService
+} from '../roles/role.service';
 
-function passwordsMatchValidator(group: AbstractControl): ValidationErrors | null {
+function passwordsMatchValidator(
+  group: AbstractControl
+): ValidationErrors | null {
   const password = group.get('password')?.value;
   const confirmPassword = group.get('confirmPassword')?.value;
 
@@ -19,56 +29,73 @@ function passwordsMatchValidator(group: AbstractControl): ValidationErrors | nul
     return null;
   }
 
-  return password === confirmPassword ? null : { passwordMismatch: true };
+  return password === confirmPassword
+    ? null
+    : { passwordMismatch: true };
 }
 
 @Component({
   selector: 'app-company-user-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, RouterModule],
+  imports: [
+    CommonModule,
+    ReactiveFormsModule,
+    RouterModule
+  ],
   templateUrl: './company-user-form.html',
   styleUrl: './company-user-form.scss'
 })
 export class CompanyUserForm implements OnInit {
-  private fb = inject(FormBuilder);
-  private companyUsersService = inject(CompanyUsersService);
-  private authService = inject(AuthService);
-  private route = inject(ActivatedRoute);
-  private router = inject(Router);
+  private readonly fb = inject(FormBuilder);
+  private readonly companyUsersService =
+    inject(CompanyUsersService);
+  private readonly roleService = inject(RoleService);
+  private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly cd = inject(ChangeDetectorRef);
 
   showPassword = false;
   showConfirmPassword = false;
 
-  /**
-   * Identifies whether this form belongs to the Learners workflow.
-   * It is true only when opened from Learners with ?role=LEARNER,
-   * or when an existing loaded record is a learner.
-   */
   isLearnerForm = false;
-
-  get restrictToLearnerOnly(): boolean {
-    const actingUserIsContentManager =
-      (this.authService.getCurrentUser()?.role || '').toUpperCase() === 'USER';
-
-    return actingUserIsContentManager || this.isLearnerForm;
-  }
-
+  roles: Role[] = [];
   companies: any[] = [];
   loading = false;
+  rolesLoading = false;
   error = '';
   success = '';
   isEdit = false;
   userId = '';
 
+  get restrictToLearnerOnly(): boolean {
+    const actingUserRole = (
+      this.authService.getCurrentUser()?.role
+      || this.authService.getUserRole()
+      || ''
+    ).trim().toUpperCase();
+
+    return actingUserRole === 'USER'
+      || this.isLearnerForm;
+  }
+
+  get canCreateSuperAdmin(): boolean {
+    return this.authService.isSuperAdmin();
+  }
+
   userForm = this.fb.group(
     {
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
+      email: [
+        '',
+        [Validators.required, Validators.email]
+      ],
       password: [''],
       confirmPassword: [''],
       phone: [''],
-      role: ['LEARNER', Validators.required],
+      role: [''],
+      roleId: [''],
       companyId: ['', Validators.required],
       status: ['Active']
     },
@@ -76,74 +103,155 @@ export class CompanyUserForm implements OnInit {
   );
 
   ngOnInit(): void {
-    this.loadCompanies();
-
     this.isLearnerForm =
-      this.route.snapshot.queryParamMap.get('role') === 'LEARNER';
+      this.route.snapshot.queryParamMap.get('role')
+        === 'LEARNER';
 
-    if (this.restrictToLearnerOnly) {
-      this.userForm.patchValue({ role: 'LEARNER' });
-    }
+    this.loadCompanies();
 
     const id = this.route.snapshot.paramMap.get('id');
 
     if (id) {
       this.isEdit = true;
       this.userId = id;
+    }
 
+    if (this.isLearnerForm) {
+      this.userForm.patchValue({
+        role: 'LEARNER',
+        roleId: ''
+      });
+    } else {
+      this.loadRoles();
+    }
+
+    if (id) {
       this.userForm.get('password')?.clearValidators();
       this.userForm.get('password')?.updateValueAndValidity();
-
       this.loadUser(id);
     } else {
-      this.userForm.get('password')?.setValidators([Validators.required]);
+      this.userForm.get('password')?.setValidators([
+        Validators.required
+      ]);
       this.userForm.get('password')?.updateValueAndValidity();
     }
+  }
+
+  loadRoles(): void {
+    this.rolesLoading = true;
+    this.error = '';
+    this.cd.detectChanges();
+
+    this.roleService.getRoles().subscribe({
+      next: roles => {
+        const isSuperAdmin =
+          this.authService.isSuperAdmin();
+
+        this.roles = roles.filter(role => {
+          const roleName = role.name.trim().toUpperCase();
+
+          if (roleName === 'LEARNER') {
+            return false;
+          }
+
+          if (
+            roleName === 'SUPER_ADMIN'
+            && !isSuperAdmin
+          ) {
+            return false;
+          }
+
+          return true;
+        });
+
+        this.rolesLoading = false;
+        this.cd.detectChanges();
+      },
+      error: error => {
+        console.error('Unable to load roles', error);
+        this.roles = [];
+        this.rolesLoading = false;
+        this.error = 'Unable to load roles.';
+        this.cd.detectChanges();
+      }
+    });
   }
 
   loadCompanies(): void {
     fetch('http://localhost:8080/api/v1/companies', {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem('accessToken') || ''}`
+        Authorization:
+          `Bearer ${localStorage.getItem('accessToken') || ''}`
       }
     })
       .then(response => response.json())
       .then(data => {
-        this.companies = Array.isArray(data) ? data : (data?.content ?? []);
+        this.companies = Array.isArray(data)
+          ? data
+          : data?.content ?? [];
+        this.cd.detectChanges();
       })
       .catch(() => {
         this.companies = [];
+        this.cd.detectChanges();
       });
   }
 
   loadUser(id: string): void {
     this.loading = true;
+    this.cd.detectChanges();
 
     this.companyUsersService.getUserById(id).subscribe({
       next: (user: any) => {
-        const role = (user.role || 'LEARNER').toUpperCase();
+        const roleName = (
+          user.role || ''
+        ).trim().toUpperCase();
 
-        // Existing learner records should use learner labels.
-        if (role === 'LEARNER') {
+        if (roleName === 'LEARNER') {
           this.isLearnerForm = true;
+          this.userForm.patchValue({
+            role: 'LEARNER',
+            roleId: ''
+          });
+        } else {
+          const matchingRole = this.roles.find(role =>
+            role.name.trim().toUpperCase() === roleName
+          );
+
+          this.userForm.patchValue({
+            role: matchingRole ? '' : roleName,
+            roleId: matchingRole?.id ?? ''
+          });
         }
 
         this.userForm.patchValue({
-          firstName: user.firstName ?? user.name?.split(' ')?.[0] ?? '',
-          lastName: user.lastName ?? user.name?.split(' ')?.slice(1).join(' ') ?? '',
+          firstName:
+            user.firstName
+            ?? user.name?.split(' ')?.[0]
+            ?? '',
+          lastName:
+            user.lastName
+            ?? user.name?.split(' ')?.slice(1).join(' ')
+            ?? '',
           email: user.email ?? '',
           phone: user.phone ?? '',
-          role,
-          companyId: user.companyId ?? user.company?.id ?? '',
+          companyId:
+            user.companyId
+            ?? user.company?.id
+            ?? '',
           status: user.status ?? 'Active'
         });
 
         this.loading = false;
+        this.cd.detectChanges();
       },
-      error: (err) => {
-        console.error(err);
-        this.error = err?.error?.message || 'Failed to load user';
+      error: error => {
+        console.error(error);
+        this.error =
+          error?.error?.message
+          || 'Failed to load user';
         this.loading = false;
+        this.cd.detectChanges();
       }
     });
   }
@@ -157,59 +265,73 @@ export class CompanyUserForm implements OnInit {
       return;
     }
 
-    this.loading = true;
-
     const raw = this.userForm.getRawValue();
+
+    if (!this.isLearnerForm && !raw.roleId) {
+      this.error = 'Please select a staff role.';
+      return;
+    }
+
+    this.loading = true;
+    this.cd.detectChanges();
 
     const payload: any = {
       firstName: raw.firstName!,
       lastName: raw.lastName!,
       email: raw.email!,
       phone: raw.phone || '',
-      role: raw.role!,
       companyId: raw.companyId || null,
       status: raw.status || 'Active'
     };
 
-    if (!this.isEdit && raw.password) {
-      payload.password = raw.password;
+    if (this.isLearnerForm) {
+      payload.role = 'LEARNER';
+    } else {
+      payload.roleId = raw.roleId;
+    }
+
+    if (!this.isEdit || raw.password) {
+      payload.password = raw.password || '';
     }
 
     const request = this.isEdit
-      ? this.companyUsersService.updateUser(this.userId, payload)
-      : this.companyUsersService.createUser({
-          ...payload,
-          password: raw.password || ''
-        });
+      ? this.companyUsersService.updateUser(
+          this.userId,
+          payload
+        )
+      : this.companyUsersService.createUser(payload);
 
     request.subscribe({
       next: () => {
         this.success = this.isLearnerForm
-          ? (this.isEdit
-              ? 'Learner updated successfully'
-              : 'Learner created successfully')
-          : (this.isEdit
-              ? 'User updated successfully'
-              : 'User created successfully');
+          ? this.isEdit
+            ? 'Learner updated successfully'
+            : 'Learner created successfully'
+          : this.isEdit
+            ? 'User updated successfully'
+            : 'User created successfully';
 
         this.loading = false;
+        this.cd.detectChanges();
         this.navigateAfterSave();
       },
-      error: (err) => {
-        console.error(err);
-        this.error = err?.error?.message || 'Failed to save user';
+      error: error => {
+        console.error(error);
+        this.error =
+          error?.error?.message
+          || 'Failed to save user';
         this.loading = false;
+        this.cd.detectChanges();
       }
     });
   }
 
   private navigateAfterSave(): void {
-    if (this.isLearnerForm) {
-      this.router.navigate(['/admin/learners']);
-      return;
-    }
-
-    this.router.navigate(['/admin/companies/users']);
+    this.router.navigate(
+      this.isLearnerForm
+        ? ['/admin/learners']
+        : ['/admin/companies/users']
+    );
   }
 
   togglePasswordVisibility(): void {
@@ -217,7 +339,8 @@ export class CompanyUserForm implements OnInit {
   }
 
   toggleConfirmPasswordVisibility(): void {
-    this.showConfirmPassword = !this.showConfirmPassword;
+    this.showConfirmPassword =
+      !this.showConfirmPassword;
   }
 
   cancel(): void {

@@ -1,3 +1,4 @@
+
 import { CommonModule } from '@angular/common';
 import {
   ChangeDetectorRef,
@@ -27,9 +28,7 @@ type LessonType =
   | 'SLIDES'
   | 'TEXT';
 
-type LessonSource =
-  | 'UPLOAD'
-  | 'LIBRARY';
+type LessonSource = 'UPLOAD' | 'LIBRARY';
 
 @Component({
   selector: 'app-course-content',
@@ -121,6 +120,7 @@ export class CourseContent implements OnInit {
       displayOrder: [0],
       isPreview: [false],
       isPublished: [true],
+      downloadable: [false],
       streamingUrl: [''],
       thumbnailUrl: [''],
       contentUrl: [''],
@@ -159,7 +159,7 @@ export class CourseContent implements OnInit {
       case 'PDF':
         return 'Upload a PDF document. Learners can open or download it on web and mobile.';
       case 'SLIDES':
-        return 'Upload a PDF export of a presentation. PowerPoint files (.ppt, .pptx) must be converted to PDF before uploading for reliable web and mobile display.';
+        return 'Upload a PDF export of a presentation. PowerPoint files must be converted to PDF.';
       case 'TEXT':
         return 'Enter written lesson content below. Do not upload a file for a TEXT lesson.';
       default:
@@ -169,7 +169,7 @@ export class CourseContent implements OnInit {
 
   loadCourseTitle(): void {
     this.coursesService.getCourseById(this.courseId).subscribe({
-      next: (res) => {
+      next: res => {
         this.courseTitle = (res?.data || res)?.title || '';
         this.cdr.detectChanges();
       },
@@ -185,7 +185,7 @@ export class CourseContent implements OnInit {
     this.error = '';
 
     this.coursesService.getModules(this.courseId).subscribe({
-      next: (res) => {
+      next: res => {
         const rawModules = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res)
@@ -208,11 +208,11 @@ export class CourseContent implements OnInit {
         this.loading = false;
         this.cdr.detectChanges();
 
-        this.modules.forEach((module) => {
+        this.modules.forEach(module => {
           this.loadLessonsForModule(module);
         });
       },
-      error: (err) => {
+      error: err => {
         this.error =
           err?.error?.message ||
           'Failed to load modules.';
@@ -224,32 +224,31 @@ export class CourseContent implements OnInit {
   }
 
   private loadLessonsForModule(module: any): void {
-    this.coursesService.getLessonsByModule(
-      this.courseId,
-      module.id
-    ).subscribe({
-      next: (lessonRes) => {
-        const lessons = Array.isArray(lessonRes?.data)
-          ? lessonRes.data
-          : Array.isArray(lessonRes)
-            ? lessonRes
-            : [];
+    this.coursesService
+      .getLessonsByModule(this.courseId, module.id)
+      .subscribe({
+        next: lessonRes => {
+          const lessons = Array.isArray(lessonRes?.data)
+            ? lessonRes.data
+            : Array.isArray(lessonRes)
+              ? lessonRes
+              : [];
 
-        module.lessons = lessons.sort(
-          (a: any, b: any) =>
-            (a.displayOrder ?? a.order ?? 0) -
-            (b.displayOrder ?? b.order ?? 0)
-        );
+          module.lessons = lessons.sort(
+            (a: any, b: any) =>
+              (a.displayOrder ?? a.order ?? 0) -
+              (b.displayOrder ?? b.order ?? 0)
+          );
 
-        module.lessonsLoaded = true;
-        this.cdr.detectChanges();
-      },
-      error: () => {
-        module.lessons = [];
-        module.lessonsLoaded = true;
-        this.cdr.detectChanges();
-      }
-    });
+          module.lessonsLoaded = true;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          module.lessons = [];
+          module.lessonsLoaded = true;
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   toggleModule(module: any): void {
@@ -333,7 +332,7 @@ export class CourseContent implements OnInit {
         this.editingModuleId = null;
         this.loadModules();
       },
-      error: (err) => {
+      error: err => {
         this.error =
           err?.error?.message ||
           'Failed to save module.';
@@ -354,18 +353,17 @@ export class CourseContent implements OnInit {
       return;
     }
 
-    this.coursesService.deleteModule(
-      this.courseId,
-      module.id
-    ).subscribe({
-      next: () => this.loadModules(),
-      error: (err) => {
-        this.error =
-          err?.error?.message ||
-          'Failed to delete module.';
-        this.cdr.detectChanges();
-      }
-    });
+    this.coursesService
+      .deleteModule(this.courseId, module.id)
+      .subscribe({
+        next: () => this.loadModules(),
+        error: err => {
+          this.error =
+            err?.error?.message ||
+            'Failed to delete module.';
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   openNewLessonForm(module: any, event: Event): void {
@@ -389,6 +387,7 @@ export class CourseContent implements OnInit {
       displayOrder: (module.lessons || []).length,
       isPreview: false,
       isPublished: true,
+      downloadable: false,
       streamingUrl: '',
       thumbnailUrl: '',
       contentUrl: '',
@@ -444,6 +443,9 @@ export class CourseContent implements OnInit {
         lesson.published ??
         lesson.isPublished ??
         true,
+      downloadable:
+        lesson.downloadable === true ||
+        lesson.isDownloadable === true,
       streamingUrl: lesson.streamingUrl || '',
       thumbnailUrl: lesson.thumbnailUrl || '',
       contentUrl: lesson.contentUrl || '',
@@ -534,7 +536,7 @@ export class CourseContent implements OnInit {
       sortBy: 'createdAt',
       direction: 'DESC'
     }).subscribe({
-      next: (response: any) => {
+      next: response => {
         const data = response?.data || response || {};
 
         this.libraryItems = Array.isArray(data.content)
@@ -544,7 +546,7 @@ export class CourseContent implements OnInit {
         this.libraryLoading = false;
         this.cdr.detectChanges();
       },
-      error: (err: any) => {
+      error: err => {
         this.libraryItems = [];
         this.libraryLoading = false;
         this.libraryError =
@@ -629,22 +631,14 @@ export class CourseContent implements OnInit {
     type: ContentLibraryItemType
   ): string {
     switch (type) {
-      case 'VIDEO':
-        return 'Video';
-      case 'AUDIO':
-        return 'Audio';
-      case 'PDF':
-        return 'PDF';
-      case 'SLIDES':
-        return 'Slides';
-      case 'DOCUMENT':
-        return 'Document';
-      case 'IMAGE':
-        return 'Image';
-      case 'LINK':
-        return 'Link';
-      default:
-        return type;
+      case 'VIDEO': return 'Video';
+      case 'AUDIO': return 'Audio';
+      case 'PDF': return 'PDF';
+      case 'SLIDES': return 'Slides';
+      case 'DOCUMENT': return 'Document';
+      case 'IMAGE': return 'Image';
+      case 'LINK': return 'Link';
+      default: return type;
     }
   }
 
@@ -652,22 +646,14 @@ export class CourseContent implements OnInit {
     type: ContentLibraryItemType
   ): string {
     switch (type) {
-      case 'VIDEO':
-        return '▶';
-      case 'AUDIO':
-        return '♪';
-      case 'PDF':
-        return '▤';
-      case 'SLIDES':
-        return '▣';
-      case 'DOCUMENT':
-        return '▤';
-      case 'IMAGE':
-        return '▧';
-      case 'LINK':
-        return '↗';
-      default:
-        return '•';
+      case 'VIDEO': return '▶';
+      case 'AUDIO': return '♪';
+      case 'PDF': return '▤';
+      case 'SLIDES': return '▣';
+      case 'DOCUMENT': return '▤';
+      case 'IMAGE': return '▧';
+      case 'LINK': return '↗';
+      default: return '•';
     }
   }
 
@@ -706,9 +692,10 @@ export class CourseContent implements OnInit {
     } else if (lessonType === 'AUDIO') {
       this.acceptTypes =
         '.mp3,.wav,.m4a,.aac,.ogg';
-    } else if (lessonType === 'PDF') {
-      this.acceptTypes = '.pdf';
-    } else if (lessonType === 'SLIDES') {
+    } else if (
+      lessonType === 'PDF' ||
+      lessonType === 'SLIDES'
+    ) {
       this.acceptTypes = '.pdf';
     } else {
       this.acceptTypes = '';
@@ -758,7 +745,7 @@ export class CourseContent implements OnInit {
 
     if (!detectedType) {
       this.error =
-        'Unsupported file type. Use MP4/MOV/WebM for video, MP3/WAV/M4A for audio, PDF for documents, and PDF for slides.';
+        'Unsupported file type. Use MP4/MOV/WebM for video, MP3/WAV/M4A for audio, and PDF for documents or slides.';
       this.selectedLessonFile = null;
       input.value = '';
       this.cdr.detectChanges();
@@ -871,6 +858,8 @@ export class CourseContent implements OnInit {
         Number(this.lessonForm.value.displayOrder) || 0,
       preview: !!this.lessonForm.value.isPreview,
       published: !!this.lessonForm.value.isPublished,
+      downloadable:
+        this.lessonForm.value.downloadable === true,
       streamingUrl: lessonType === 'VIDEO'
         ? String(
             this.lessonForm.value.streamingUrl || ''
@@ -903,7 +892,7 @@ export class CourseContent implements OnInit {
         );
 
     request.subscribe({
-      next: (res) => {
+      next: res => {
         const lessonId = res?.data?.id || res?.id;
 
         this.lessonSubmitting = false;
@@ -928,7 +917,7 @@ export class CourseContent implements OnInit {
           );
         }
       },
-      error: (err) => {
+      error: err => {
         this.error =
           err?.error?.message ||
           'Failed to save lesson.';
@@ -953,19 +942,21 @@ export class CourseContent implements OnInit {
       return;
     }
 
-    this.coursesService.deleteLesson(
-      this.courseId,
-      module.id,
-      lesson.id
-    ).subscribe({
-      next: () => this.reloadLessons(module.id),
-      error: (err) => {
-        this.error =
-          err?.error?.message ||
-          'Failed to delete lesson.';
-        this.cdr.detectChanges();
-      }
-    });
+    this.coursesService
+      .deleteLesson(
+        this.courseId,
+        module.id,
+        lesson.id
+      )
+      .subscribe({
+        next: () => this.reloadLessons(module.id),
+        error: err => {
+          this.error =
+            err?.error?.message ||
+            'Failed to delete lesson.';
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   private uploadLessonFile(
@@ -973,22 +964,21 @@ export class CourseContent implements OnInit {
     moduleId: string,
     file: File
   ): void {
-    this.coursesService.uploadLessonContent(
-      lessonId,
-      file
-    ).subscribe({
-      next: () => {
-        this.selectedLessonFile = null;
-        this.currentLessonFileName = '';
-        this.reloadLessons(moduleId);
-      },
-      error: (err) => {
-        this.error =
-          err?.error?.message ||
-          'Lesson was saved, but its file upload failed.';
-        this.cdr.detectChanges();
-      }
-    });
+    this.coursesService
+      .uploadLessonContent(lessonId, file)
+      .subscribe({
+        next: () => {
+          this.selectedLessonFile = null;
+          this.currentLessonFileName = '';
+          this.reloadLessons(moduleId);
+        },
+        error: err => {
+          this.error =
+            err?.error?.message ||
+            'Lesson was saved, but its file upload failed.';
+          this.cdr.detectChanges();
+        }
+      });
   }
 
   private reloadLessons(moduleId: string): void {
@@ -1001,7 +991,6 @@ export class CourseContent implements OnInit {
     }
 
     this.loadLessonsForModule(module);
-
     module.expanded = true;
   }
 
@@ -1009,16 +998,11 @@ export class CourseContent implements OnInit {
     type: ContentLibraryItemType
   ): LessonType | null {
     switch (type) {
-      case 'VIDEO':
-        return 'VIDEO';
-      case 'AUDIO':
-        return 'AUDIO';
-      case 'PDF':
-        return 'PDF';
-      case 'SLIDES':
-        return 'SLIDES';
-      default:
-        return null;
+      case 'VIDEO': return 'VIDEO';
+      case 'AUDIO': return 'AUDIO';
+      case 'PDF': return 'PDF';
+      case 'SLIDES': return 'SLIDES';
+      default: return null;
     }
   }
 

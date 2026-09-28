@@ -6,7 +6,9 @@ import com.learnos.auth.dto.RefreshTokenRequest;
 import com.learnos.auth.dto.RegisterRequest;
 import com.learnos.auth.model.Role;
 import com.learnos.auth.model.User;
+import com.learnos.auth.model.UserRole;
 import com.learnos.auth.repository.UserRepository;
+import com.learnos.auth.repository.UserRoleRepository;
 import com.learnos.auth.security.JwtUtil;
 import com.learnos.company.entity.Company;
 import com.learnos.company.repository.CompanyRepository;
@@ -19,15 +21,18 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    private static final SecureRandom SECURE_RANDOM =
+            new SecureRandom();
 
     private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
     private final CompanyRepository companyRepository;
     private final CompanyUserRepository companyUserRepository;
     private final PasswordEncoder passwordEncoder;
@@ -96,7 +101,7 @@ public class AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(
                 user.getEmail(),
-                user.getRole().name(),
+                getPrimaryDynamicRole(user),
                 user.getCompany() != null
                         ? user.getCompany().getId().toString()
                         : null,
@@ -123,7 +128,7 @@ public class AuthService {
 
         String accessToken = jwtUtil.generateAccessToken(
                 user.getEmail(),
-                user.getRole().name(),
+                getPrimaryDynamicRole(user),
                 user.getCompany() != null
                         ? user.getCompany().getId().toString()
                         : null,
@@ -138,6 +143,18 @@ public class AuthService {
         userRepository.save(user);
 
         return buildAuthResponse(user, accessToken, refreshToken);
+    }
+
+    private String getPrimaryDynamicRole(User user) {
+        List<UserRole> userRoles =
+                userRoleRepository.findRolesByUserId(user.getId());
+
+        return userRoles.stream()
+                .map(userRole ->
+                        userRole.getRole().getName()
+                )
+                .findFirst()
+                .orElse(user.getRole().name());
     }
 
     public String forgotPassword(String email) {
@@ -175,6 +192,7 @@ public class AuthService {
                         + ": "
                         + otp
         );
+
         return "A password reset OTP has been sent to your email address.";
     }
 

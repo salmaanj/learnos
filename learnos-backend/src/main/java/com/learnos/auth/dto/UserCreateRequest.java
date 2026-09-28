@@ -12,7 +12,9 @@ public record UserCreateRequest(
         @NotBlank String password,
         String phone,
         String role,
+        UUID roleId,
         UUID companyId,
         String companyRole,
         String status
-) {}
+) {
+}

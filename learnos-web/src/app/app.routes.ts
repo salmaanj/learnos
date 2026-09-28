@@ -105,7 +105,7 @@ const pendingCompanyAdminGuard = () => {
 
         return true;
       }),
-      catchError(error => {
+      catchError(() => {
         authService.setSubscriptionStatus(
           'PENDING_PAYMENT'
         );
@@ -600,6 +600,17 @@ export const routes: Routes = [
           import(
             './features/admin/analytics/analytics'
           ).then(m => m.Analytics)
+      },
+      {
+        path: 'roles',
+        canActivate: [
+          pendingCompanyAdminGuard,
+          superAdminOnlyGuard
+        ],
+        loadComponent: () =>
+          import(
+            './features/admin/roles/roles-page.component'
+          ).then(m => m.RolesPageComponent)
       },
       {
         path: '',

@@ -26,18 +26,16 @@ class LiveClassModel {
     final tutor = json['tutor'];
 
     return LiveClassModel(
-      id: '${json['id'] ?? json['_id']}',
+      id: '${json['id'] ?? json['_id'] ?? ''}',
       title: '${json['title'] ?? json['name'] ?? 'Live Class'}',
       description: json['description']?.toString(),
       courseTitle: json['courseTitle']?.toString() ??
           (course is Map ? course['title']?.toString() : null),
       tutorName: json['tutorName']?.toString() ??
-          (tutor is Map
-              ? '${tutor['firstName'] ?? ''} ${tutor['lastName'] ?? ''}'
-              .trim()
-              : null),
+          _readPersonName(tutor),
       scheduledAt: _parseDateTime(
         json['scheduledAt'] ??
+            json['startAt'] ??
             json['startTime'] ??
             json['scheduledDate'] ??
             json['date'],
@@ -53,14 +51,38 @@ class LiveClassModel {
     );
   }
 
+  static String? _readPersonName(dynamic person) {
+    if (person is! Map) {
+      return null;
+    }
+
+    final firstName = person['firstName']?.toString().trim() ?? '';
+    final lastName = person['lastName']?.toString().trim() ?? '';
+    final fullName = person['fullName']?.toString().trim() ?? '';
+    final name = '$firstName $lastName'.trim();
+
+    if (name.isNotEmpty) {
+      return name;
+    }
+
+    return fullName.isEmpty ? null : fullName;
+  }
+
   static DateTime _parseDateTime(dynamic value) {
     if (value is DateTime) {
       return value.toLocal();
     }
 
-    final parsed = DateTime.tryParse(value?.toString() ?? '');
+    final text = value?.toString().trim() ?? '';
+    final parsed = DateTime.tryParse(text);
 
-    return (parsed ?? DateTime.now()).toLocal();
+    if (parsed != null) {
+      return parsed.toLocal();
+    }
+
+    // The API must provide the scheduled date/time. This fallback only
+    // prevents a malformed response from crashing the mobile screen.
+    return DateTime.fromMillisecondsSinceEpoch(0).toLocal();
   }
 
   static int _parseInt(dynamic value, {required int fallback}) {
