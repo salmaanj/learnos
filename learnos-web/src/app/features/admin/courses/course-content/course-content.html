@@ -15,7 +15,14 @@
     <div class="state-message" *ngIf="modules.length === 0 && !showModuleForm">
       This course has no modules yet. Modules are how you group lessons — for example, “Module 1: Getting Started”. Add your first module below.
     </div>
-
+<div class="content-section-actions">
+  <button
+    type="button"
+    class="btn btn-primary"
+    (click)="openNewModuleForm()">
+    + Add Module
+  </button>
+</div>
     <div class="module-card" *ngFor="let module of modules">
       <div class="module-header" (click)="toggleModule(module)">
         <div class="module-title-block">
@@ -145,5 +152,81 @@
     </div>
 
     <div class="card module-form-card" *ngIf="showModuleForm">
-      <div class="sec-hd"><span class="sec-title">{{ editingModuleId ? 'Edit Module' : 'New Module' }}</span></div>
-      <form [formGroup]="moduleForm" (ngSubmit)="submitModules()">
+  <div class="sec-hd">
+    <span class="sec-title">
+      {{ editingModuleId ? 'Edit Module' : 'New Module' }}
+    </span>
+  </div>
+
+  <form
+    [formGroup]="moduleForm"
+    (ngSubmit)="submitModules()"
+    class="module-form">
+
+    <div class="form-row">
+      <div class="field field-full">
+        <label for="module-title">Module title</label>
+        <input
+          id="module-title"
+          type="text"
+          formControlName="title"
+          placeholder="Example: Written Communication" />
+
+        <small
+          class="field-error"
+          *ngIf="mf['title'].touched && mf['title'].invalid">
+          Enter a module title with at least 3 characters.
+        </small>
+      </div>
+    </div>
+
+    <div class="field field-full">
+      <label for="module-description">Description</label>
+      <textarea
+        id="module-description"
+        class="text-input"
+        formControlName="description"
+        rows="3"
+        placeholder="Describe what learners will cover in this module.">
+      </textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="field">
+        <label for="module-order">Display order</label>
+        <input
+          id="module-order"
+          type="number"
+          min="0"
+          formControlName="displayOrder" />
+      </div>
+
+      <label class="check-inline module-preview-check">
+        <input
+          type="checkbox"
+          formControlName="isPreview" />
+        <span>Module preview</span>
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button
+        type="submit"
+        class="btn btn-primary"
+        [disabled]="moduleSubmitting">
+        {{ moduleSubmitting
+          ? 'Saving…'
+          : editingModuleId
+            ? 'Save Module'
+            : 'Create Module' }}
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="cancelModuleForm()">
+        Cancel
+      </button>
+    </div>
+  </form>
+</div>
