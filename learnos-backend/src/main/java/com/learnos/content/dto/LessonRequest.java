@@ -17,5 +17,6 @@ public class LessonRequest {
     private Integer durationSeconds;
     private boolean isPreview;
     private boolean isPublished = true;
+    private boolean downloadable = false;
     private int displayOrder;
 }

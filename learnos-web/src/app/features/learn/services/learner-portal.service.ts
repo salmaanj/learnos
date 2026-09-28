@@ -75,10 +75,7 @@ export class LearnerPortalService {
 
     return this.http.get<any>(
       `${this.baseUrl}/courses`,
-      {
-        headers: this.headers(),
-        params
-      }
+      { headers: this.headers(), params }
     );
   }
 
@@ -163,6 +160,16 @@ export class LearnerPortalService {
     );
   }
 
+  downloadLesson(lessonId: string): Observable<Blob> {
+    return this.http.get(
+      `${this.baseUrl}/lessons/${lessonId}/download`,
+      {
+        headers: this.headers(),
+        responseType: 'blob'
+      }
+    );
+  }
+
   getCourseProgress(courseId: string): Observable<any> {
     return this.http.get<any>(
       `${this.baseUrl}/lessons/progress/course/${courseId}`,
@@ -193,10 +200,7 @@ export class LearnerPortalService {
       `${this.baseUrl}/lessons/progress`,
       {
         lessonId,
-        watchedSeconds: Math.max(
-          0,
-          Math.floor(watchedSeconds)
-        ),
+        watchedSeconds: Math.max(0, Math.floor(watchedSeconds)),
         completed
       },
       { headers: this.headers() }

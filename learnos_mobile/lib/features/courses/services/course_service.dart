@@ -77,13 +77,13 @@ class CourseProgressModel {
       resumePositionSeconds: _toInt(json['resumePositionSeconds']),
       lessons: rawLessons is List
           ? rawLessons
-          .whereType<Map>()
-          .map(
-            (item) => LessonProgressModel.fromJson(
-          Map<String, dynamic>.from(item),
-        ),
-      )
-          .toList()
+              .whereType<Map>()
+              .map(
+                (item) => LessonProgressModel.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .toList()
           : [],
     );
   }
@@ -104,15 +104,17 @@ class CourseRatingModel {
 
   factory CourseRatingModel.fromJson(Map<String, dynamic> json) {
     final rawMyRating = json['myRating'];
-    final parsedMyRating = rawMyRating == null ? null : _toInt(rawMyRating);
+    final parsedMyRating = rawMyRating == null
+        ? null
+        : _toInt(rawMyRating);
 
     return CourseRatingModel(
       courseId: (json['courseId'] ?? '').toString(),
       averageRating: _clampRating(_toDouble(json['averageRating'])),
       ratingCount: _toInt(json['ratingCount']),
       myRating: parsedMyRating != null &&
-          parsedMyRating >= 1 &&
-          parsedMyRating <= 5
+              parsedMyRating >= 1 &&
+              parsedMyRating <= 5
           ? parsedMyRating
           : null,
     );
@@ -221,7 +223,6 @@ class CourseService {
   Future<List<CategoryModel>> getCategories() async {
     final response = await _dio.get(ApiConstants.categories);
     final List data = response.data['data'];
-
     return data.map((item) => CategoryModel.fromJson(item)).toList();
   }
 
@@ -233,7 +234,6 @@ class CourseService {
       ApiConstants.courses,
       queryParameters: {'page': page, 'size': size},
     );
-
     final data = response.data['data'];
     final List content = data['content'];
 
@@ -249,7 +249,6 @@ class CourseService {
       ApiConstants.searchCourses,
       queryParameters: {'q': query},
     );
-
     final List content = response.data['data']['content'];
     return content.map((item) => CourseModel.fromJson(item)).toList();
   }
@@ -277,9 +276,10 @@ class CourseService {
       final response = await _dio.get(
         '${ApiConstants.courses}/$courseId/rating',
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
       return CourseRatingModel.fromJson(
         Map<String, dynamic>.from(data as Map),
@@ -302,9 +302,10 @@ class CourseService {
         '${ApiConstants.courses}/$courseId/rating',
         data: {'stars': stars},
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
       return CourseRatingModel.fromJson(
         Map<String, dynamic>.from(data as Map),
@@ -319,7 +320,6 @@ class CourseService {
       final response = await _dio.get('${ApiConstants.courses}/featured');
       final data = response.data['data'];
       final List list = data is List ? data : [];
-
       return list.map((item) => CourseModel.fromJson(item)).toList();
     } catch (_) {
       return [];
@@ -327,16 +327,17 @@ class CourseService {
   }
 
   Future<CoursePaymentOrderModel> createCoursePaymentOrder(
-      String courseId,
-      ) async {
+    String courseId,
+  ) async {
     try {
       final response = await _dio.post(
         '$_apiBaseUrl/course-payments/payment-order',
         data: {'courseId': courseId},
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
       if (data is! Map) {
         throw Exception('Invalid course payment order response.');
@@ -364,10 +365,10 @@ class CourseService {
           'razorpaySignature': razorpaySignature,
         },
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
-
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
       return data?.toString() ?? 'Course payment verified.';
     } on DioException catch (e) {
       throw Exception(_extractDioError(e));
@@ -378,23 +379,17 @@ class CourseService {
     try {
       final response = await _dio.get('/payment-history/my');
       final body = response.data;
-
       dynamic data = body;
-      if (body is Map && body['data'] != null) {
-        data = body['data'];
-      }
-
-      if (data is! List) {
-        return [];
-      }
+      if (body is Map && body['data'] != null) data = body['data'];
+      if (data is! List) return [];
 
       return data
           .whereType<Map>()
           .map(
             (item) => PaymentHistoryRecordModel.fromJson(
-          Map<String, dynamic>.from(item),
-        ),
-      )
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .toList();
     } on DioException catch (e) {
       throw Exception(_extractDioError(e));
@@ -411,7 +406,6 @@ class CourseService {
 
     final modulesBody = modulesResponse.data;
     final lessonsBody = lessonsResponse.data;
-
     final modulesData = modulesBody is Map && modulesBody['data'] != null
         ? modulesBody['data']
         : modulesBody;
@@ -421,25 +415,29 @@ class CourseService {
 
     final modules = modulesData is List
         ? modulesData
-        .whereType<Map>()
-        .map(
-          (item) => ModuleModel.fromJson(Map<String, dynamic>.from(item)),
-    )
-        .toList()
+            .whereType<Map>()
+            .map(
+              (item) => ModuleModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .toList()
         : <ModuleModel>[];
 
     final lessons = lessonsData is List
         ? lessonsData
-        .whereType<Map>()
-        .map(
-          (item) => LessonModel.fromJson(Map<String, dynamic>.from(item)),
-    )
-        .where((lesson) => lesson.isPublished)
-        .toList()
+            .whereType<Map>()
+            .map(
+              (item) => LessonModel.fromJson(
+                Map<String, dynamic>.from(item),
+              ),
+            )
+            .where((lesson) => lesson.isPublished)
+            .toList()
         : <LessonModel>[];
 
     modules.sort(
-          (left, right) => left.displayOrder.compareTo(right.displayOrder),
+      (left, right) => left.displayOrder.compareTo(right.displayOrder),
     );
 
     return modules.map((module) {
@@ -469,7 +467,6 @@ class CourseService {
       final response = await _dio.get(
         '${ApiConstants.courses}/$courseId/lessons',
       );
-
       final body = response.data;
       dynamic data = body;
 
@@ -481,8 +478,10 @@ class CourseService {
       return data
           .whereType<Map>()
           .map(
-            (item) => LessonModel.fromJson(Map<String, dynamic>.from(item)),
-      )
+            (item) => LessonModel.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          )
           .where((lesson) => lesson.isPublished)
           .toList();
     } on DioException catch (e) {
@@ -492,14 +491,31 @@ class CourseService {
     }
   }
 
+  Future<String> downloadLessonFile({
+    required String lessonId,
+    required String filePath,
+  }) async {
+    try {
+      await _dio.download(
+        '$_apiBaseUrl/lessons/$lessonId/download',
+        filePath,
+        options: Options(responseType: ResponseType.bytes),
+      );
+      return filePath;
+    } on DioException catch (e) {
+      throw Exception(_extractDioError(e));
+    }
+  }
+
   Future<CourseProgressModel> getCourseProgress(String courseId) async {
     try {
       final response = await _dio.get(
         '$_apiBaseUrl/lessons/progress/course/$courseId',
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
       if (data is! Map) {
         throw Exception('Invalid course progress response.');
@@ -527,9 +543,10 @@ class CourseService {
           'completed': completed,
         },
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
       return LessonProgressModel.fromJson(
         Map<String, dynamic>.from(data),
@@ -545,9 +562,10 @@ class CourseService {
         '$_apiBaseUrl/lessons/$lessonId/complete',
         data: {},
       );
-
       final body = response.data;
-      final data = body is Map && body['data'] != null ? body['data'] : body;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
       return LessonProgressModel.fromJson(
         Map<String, dynamic>.from(data),
@@ -561,7 +579,6 @@ class CourseService {
     final response = await _dio.get(
       '${ApiConstants.courses}/category/$categoryId',
     );
-
     final List content = response.data['data']['content'];
     return content.map((item) => CourseModel.fromJson(item)).toList();
   }
@@ -613,9 +630,7 @@ bool _toBool(dynamic value) {
   return value?.toString().toLowerCase() == 'true';
 }
 
-double _clampRating(double value) {
-  return value.clamp(0.0, 5.0);
-}
+double _clampRating(double value) => value.clamp(0.0, 5.0);
 
 DateTime? _parseDate(dynamic value) {
   if (value == null) return null;

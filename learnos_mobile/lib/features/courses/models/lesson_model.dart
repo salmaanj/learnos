@@ -13,6 +13,7 @@ class LessonModel {
   final int order;
   final bool isPreview;
   final bool isPublished;
+  final bool downloadable;
   final bool isCompleted;
   final int watchedSeconds;
   final int progressPercent;
@@ -32,6 +33,7 @@ class LessonModel {
     required this.order,
     this.isPreview = false,
     this.isPublished = false,
+    this.downloadable = false,
     this.isCompleted = false,
     this.watchedSeconds = 0,
     this.progressPercent = 0,
@@ -42,8 +44,15 @@ class LessonModel {
   factory LessonModel.fromJson(Map<String, dynamic> json) {
     final seconds = _toInt(json['durationSeconds']);
     final durationValue = json['durationMinutes'] ?? json['duration'];
-    final rawContent = _nonEmpty(json['contentUrl'] ?? json['content_url'] ?? json['url']);
-    final rawStreaming = _nonEmpty(json['streamingUrl'] ?? json['streaming_url'] ?? json['videoUrl'] ?? json['video_url']);
+    final rawContent = _nonEmpty(
+      json['contentUrl'] ?? json['content_url'] ?? json['url'],
+    );
+    final rawStreaming = _nonEmpty(
+      json['streamingUrl'] ??
+          json['streaming_url'] ??
+          json['videoUrl'] ??
+          json['video_url'],
+    );
 
     return LessonModel(
       id: (json['id'] ?? '').toString(),
@@ -53,11 +62,21 @@ class LessonModel {
       streamingUrl: ApiConstants.resolveMediaUrl(rawStreaming),
       textContent: json['textContent']?.toString(),
       type: (json['type']?.toString() ?? 'VIDEO').toUpperCase(),
-      durationMinutes: durationValue != null ? _toInt(durationValue) : _secondsToMinutes(seconds),
+      durationMinutes: durationValue != null
+          ? _toInt(durationValue)
+          : _secondsToMinutes(seconds),
       durationSeconds: seconds,
-      order: _toInt(json['displayOrder'] ?? json['order'] ?? json['sortOrder']) ?? 0,
+      order: _toInt(
+            json['displayOrder'] ??
+                json['order'] ??
+                json['sortOrder'],
+          ) ??
+          0,
       isPreview: _toBool(json['preview'] ?? json['isPreview']),
       isPublished: _toBool(json['published'] ?? json['isPublished']),
+      downloadable: _toBool(
+        json['downloadable'] ?? json['isDownloadable'],
+      ),
       isCompleted: _toBool(json['completed'] ?? json['isCompleted']),
       watchedSeconds: _toInt(json['watchedSeconds']) ?? 0,
       progressPercent: _toInt(json['progressPercent']) ?? 0,
@@ -66,8 +85,11 @@ class LessonModel {
     );
   }
 
-  String? get mediaUrl => _hasValue(streamingUrl) ? streamingUrl : contentUrl;
+  String? get mediaUrl =>
+      _hasValue(streamingUrl) ? streamingUrl : contentUrl;
+
   String? get documentUrl => contentUrl;
+
   String? get videoUrl => mediaUrl;
 
   LessonModel copyWith({
@@ -75,6 +97,7 @@ class LessonModel {
     int? watchedSeconds,
     int? progressPercent,
     int? durationSeconds,
+    bool? downloadable,
   }) {
     return LessonModel(
       id: id,
@@ -89,6 +112,7 @@ class LessonModel {
       order: order,
       isPreview: isPreview,
       isPublished: isPublished,
+      downloadable: downloadable ?? this.downloadable,
       isCompleted: isCompleted ?? this.isCompleted,
       watchedSeconds: watchedSeconds ?? this.watchedSeconds,
       progressPercent: progressPercent ?? this.progressPercent,
@@ -103,7 +127,8 @@ class LessonModel {
     return text.isEmpty ? null : text;
   }
 
-  static bool _hasValue(String? value) => value != null && value.trim().isNotEmpty;
+  static bool _hasValue(String? value) =>
+      value != null && value.trim().isNotEmpty;
 
   static int? _toInt(dynamic value) {
     if (value == null) return null;
@@ -112,12 +137,15 @@ class LessonModel {
     return int.tryParse(value.toString());
   }
 
-  static int? _secondsToMinutes(int? seconds) => seconds == null ? null : (seconds / 60).ceil();
+  static int? _secondsToMinutes(int? seconds) =>
+      seconds == null ? null : (seconds / 60).ceil();
 
   static bool _toBool(dynamic value) {
     if (value is bool) return value;
     final normalized = value?.toString().trim().toLowerCase();
-    return normalized == 'true' || normalized == '1' || normalized == 'yes';
+    return normalized == 'true' ||
+        normalized == '1' ||
+        normalized == 'yes';
   }
 
   String get durationText {
@@ -129,7 +157,8 @@ class LessonModel {
 
   bool get isYoutube {
     final url = mediaUrl;
-    return _hasValue(url) && (url!.contains('youtube.com') || url.contains('youtu.be'));
+    return _hasValue(url) &&
+        (url!.contains('youtube.com') || url.contains('youtu.be'));
   }
 
   String? get youtubeId {
@@ -137,7 +166,11 @@ class LessonModel {
     if (!isYoutube || url == null) return null;
     final uri = Uri.tryParse(url);
     if (uri == null) return null;
-    if (uri.queryParameters.containsKey('v')) return uri.queryParameters['v'];
-    return uri.pathSegments.isNotEmpty ? uri.pathSegments.last : null;
+    if (uri.queryParameters.containsKey('v')) {
+      return uri.queryParameters['v'];
+    }
+    return uri.pathSegments.isNotEmpty
+        ? uri.pathSegments.last
+        : null;
   }
 }

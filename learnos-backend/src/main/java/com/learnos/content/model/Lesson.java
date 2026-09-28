@@ -35,23 +35,24 @@ public class Lesson {
     @Column(nullable = false)
     private LessonType type;
 
-    // Content URLs (populated based on type)
-    private String contentUrl;       // S3/CDN URL for video/audio/pdf/slides
-    private String streamingUrl;     // HLS URL for video streaming
+    private String contentUrl;
+    private String streamingUrl;
     private String thumbnailUrl;
 
     @Column(columnDefinition = "TEXT")
-    private String textContent;      // for TEXT-type lessons
+    private String textContent;
 
-    // Video specific
     private Integer durationSeconds;
 
-    // Common
     @Builder.Default
     private boolean isPreview = false;
 
     @Builder.Default
     private boolean isPublished = true;
+
+    @Builder.Default
+    @Column(nullable = false)
+    private boolean downloadable = false;
 
     @Builder.Default
     private int displayOrder = 0;

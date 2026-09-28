@@ -25,6 +25,7 @@ public class LessonResponse {
     private int order;
     private boolean isPreview;
     private boolean isPublished;
+    private boolean downloadable;
     private UUID moduleId;
     private String moduleTitle;
     private LocalDateTime createdAt;

@@ -1,646 +1,167 @@
 <div class="page" *ngIf="!loading">
-  <a
-    routerLink="/learn/courses"
-    class="back-link"
-  >
-    ← Back to courses
-  </a>
+  <a routerLink="/learn/courses" class="back-link">← Back to courses</a>
 
-  <div
-    class="error-banner"
-    *ngIf="errorMessage"
-  >
-    {{ errorMessage }}
-  </div>
-
-  <div
-    class="error-banner payment-error-banner"
-    *ngIf="paymentError"
-  >
-    {{ paymentError }}
-  </div>
+  <div class="error-banner" *ngIf="errorMessage">{{ errorMessage }}</div>
+  <div class="error-banner payment-error-banner" *ngIf="paymentError">{{ paymentError }}</div>
 
   <ng-container *ngIf="course">
     <section class="course-hero">
       <div class="course-hero-main">
         <div class="hero-badges">
-          <span
-            class="badge badge-gr"
-            *ngIf="!isPaid"
-          >
-            Free course
-          </span>
-
-          <span
-            class="badge badge-am"
-            *ngIf="isPaid"
-          >
-            {{ formattedPrice }}
-          </span>
-
-          <span
-            class="category-badge"
-            *ngIf="course.categoryName"
-          >
-            {{ course.categoryName }}
-          </span>
+          <span class="badge badge-gr" *ngIf="!isPaid">Free course</span>
+          <span class="badge badge-am" *ngIf="isPaid">{{ formattedPrice }}</span>
+          <span class="category-badge" *ngIf="course.categoryName">{{ course.categoryName }}</span>
         </div>
 
-        <h1 class="course-title">
-          {{ course.title }}
-        </h1>
-
-        <p
-          class="course-short-desc"
-          *ngIf="course.shortDescription"
-        >
-          {{ course.shortDescription }}
-        </p>
+        <h1 class="course-title">{{ course.title }}</h1>
+        <p class="course-short-desc" *ngIf="course.shortDescription">{{ course.shortDescription }}</p>
 
         <div class="course-meta">
           <span>{{ totalLessons }} lessons</span>
-
-          <span *ngIf="course.durationMinutes">
-            · {{ course.durationMinutes }} min
-          </span>
-
-          <span *ngIf="course.level">
-            · {{ course.level }}
-          </span>
-
-          <span *ngIf="course.instructorName">
-            · {{ course.instructorName }}
-          </span>
+          <span *ngIf="course.durationMinutes"> · {{ course.durationMinutes }} min</span>
+          <span *ngIf="course.level"> · {{ course.level }}</span>
+          <span *ngIf="course.instructorName"> · {{ course.instructorName }}</span>
         </div>
 
         <div class="course-rating-summary">
           <span class="course-rating-stars">
-            <ng-container *ngFor="let star of ratingStars()">
-              {{ isStarFilled(star) ? '★' : '☆' }}
-            </ng-container>
+            <ng-container *ngFor="let star of ratingStars()">{{ isStarFilled(star) ? '★' : '☆' }}</ng-container>
           </span>
-
-          <strong class="course-rating-value">
-            {{ averageRating.toFixed(1) }}
-          </strong>
-
-          <span>
-            {{ ratingText }}
-          </span>
+          <strong class="course-rating-value">{{ averageRating.toFixed(1) }}</strong>
+          <span class="course-rating-count">({{ ratingText }})</span>
         </div>
 
-        <div
-          class="course-progress"
-          *ngIf="enrolled"
-        >
+        <div class="course-progress" *ngIf="enrolled">
           <div class="course-progress-top">
-            <span>
-              {{ completedLessons }} of
-              {{ totalLessons }} lessons completed
-            </span>
-
-            <strong>
-              {{ courseProgressPercent }}%
-            </strong>
+            <span>{{ completedLessons }} of {{ totalLessons }} lessons completed</span>
+            <strong>{{ courseProgressPercent }}%</strong>
           </div>
-
-          <div class="prog">
-            <div
-              class="prog-fill"
-              [style.width.%]="courseProgressPercent"
-              [style.background]="'var(--gr)'"
-            ></div>
-          </div>
-
-          <small *ngIf="progressLoading">
-            Loading your progress…
-          </small>
-
-          <small
-            *ngIf="courseProgress?.contentCompleted"
-            class="content-complete"
-          >
-            ✓ Course content completed.
-            Assessment is now unlocked.
-          </small>
+          <div class="prog"><div class="prog-fill" [style.width.%]="courseProgressPercent" [style.background]="'var(--gr)'"></div></div>
+          <small *ngIf="progressLoading">Loading your progress…</small>
+          <small *ngIf="courseProgress?.contentCompleted" class="content-complete">✓ Course content completed. Assessment is now unlocked.</small>
         </div>
       </div>
 
       <aside class="enrollment-card">
-        <div class="price-label">
-          {{
-            enrolled
-              ? 'Course access'
-              : isPaid
-                ? 'Course price'
-                : 'Enrollment'
-          }}
-        </div>
+        <div class="price-label">{{ enrolled ? 'Course access' : isPaid ? 'Course price' : 'Enrollment' }}</div>
+        <div class="hero-price" [class.free]="!isPaid">{{ enrolled ? 'Enrolled' : formattedPrice }}</div>
 
-        <div
-          class="hero-price"
-          [class.free]="!isPaid"
-        >
-          {{ enrolled ? 'Enrolled' : formattedPrice }}
-        </div>
-
-        <button
-          *ngIf="!enrolled"
-          class="btn btn-primary enroll-button"
-          [disabled]="enrolling || paymentLoading"
-          (click)="enroll()"
-        >
-          {{
-            enrolling || paymentLoading
-              ? 'Processing...'
-              : isPaid
-                ? 'Pay now to enroll'
-                : 'Enroll Now — Free'
-          }}
+        <button *ngIf="!enrolled" class="btn btn-primary enroll-button" [disabled]="enrolling || paymentLoading" (click)="enroll()">
+          {{ enrolling || paymentLoading ? 'Processing...' : isPaid ? 'Pay now to enroll' : 'Enroll Now — Free' }}
         </button>
 
-        <button
-          *ngIf="enrolled"
-          class="btn btn-primary enroll-button"
-          (click)="continueLearning()"
-        >
-          {{
-            hasResumeLesson
-              ? 'Continue where you left off'
-              : 'Start Learning'
-          }}
+        <button *ngIf="enrolled" class="btn btn-primary enroll-button" (click)="continueLearning()">
+          {{ hasResumeLesson ? 'Continue where you left off' : 'Start Learning' }}
         </button>
 
-        <div
-          *ngIf="enrolled"
-          class="rating-panel"
-        >
-          <div class="rating-panel-title">
-            Rate this course
-          </div>
-
+        <div *ngIf="enrolled" class="rating-panel">
+          <div class="rating-panel-title">Rate this course</div>
           <div class="rating-input">
-            <button
-              *ngFor="let star of ratingStars()"
-              type="button"
-              [disabled]="ratingSaving"
-              (click)="submitRating(star)"
-              [attr.aria-label]="'Give ' + star + ' stars'"
-              [title]="'Give ' + star + ' stars'"
-              class="rating-star-button"
-            >
-              {{
-                star <= (myRating || 0)
-                  ? '★'
-                  : '☆'
-              }}
-            </button>
+            <button *ngFor="let star of ratingStars()" type="button" [disabled]="ratingSaving" (click)="submitRating(star)" class="rating-star-button">{{ star <= (myRating || 0) ? '★' : '☆' }}</button>
           </div>
-
-          <small class="rating-help">
-            {{
-              ratingSaving
-                ? 'Saving your rating…'
-                : myRating
-                  ? 'Your rating: ' + myRating + ' out of 5. Select another star to update it.'
-                  : 'Select 1 to 5 stars to rate this course.'
-            }}
-          </small>
+          <small class="rating-help">{{ ratingSaving ? 'Saving your rating…' : myRating ? 'Your rating: ' + myRating + ' out of 5. Select another star to update it.' : 'Select 1 to 5 stars to rate this course.' }}</small>
         </div>
 
-        <p
-          class="paid-note"
-          *ngIf="isPaid && !enrolled"
-        >
-          Pay securely online to enroll and unlock the full course.
-        </p>
-
-        <p
-          class="enrolled-note"
-          *ngIf="enrolled"
-        >
-          You have full access to this course and its lessons.
-        </p>
+        <p class="paid-note" *ngIf="isPaid && !enrolled">Pay securely online to enroll and unlock the full course.</p>
+        <p class="enrolled-note" *ngIf="enrolled">You have full access to this course and its lessons.</p>
       </aside>
     </section>
 
     <section class="course-overview">
-      <article class="overview-card">
-        <h2>About this course</h2>
-        <p>{{ courseDescription }}</p>
-      </article>
-
-      <article
-        class="overview-card"
-        *ngIf="learningOutcomes.length > 0"
-      >
-        <h2>What you will learn</h2>
-
-        <ul>
-          <li *ngFor="let outcome of learningOutcomes">
-            {{ outcome }}
-          </li>
-        </ul>
-      </article>
-
-      <article
-        class="overview-card"
-        *ngIf="prerequisites.length > 0"
-      >
-        <h2>Prerequisites</h2>
-
-        <ul>
-          <li *ngFor="let prerequisite of prerequisites">
-            {{ prerequisite }}
-          </li>
-        </ul>
-      </article>
+      <article class="overview-card"><h2>About this course</h2><p>{{ courseDescription }}</p></article>
+      <article class="overview-card" *ngIf="learningOutcomes.length > 0"><h2>What you will learn</h2><ul><li *ngFor="let outcome of learningOutcomes">{{ outcome }}</li></ul></article>
+      <article class="overview-card" *ngIf="prerequisites.length > 0"><h2>Prerequisites</h2><ul><li *ngFor="let prerequisite of prerequisites">{{ prerequisite }}</li></ul></article>
     </section>
 
-    <section
-      class="quizzes-section"
-      *ngIf="enrolled && (quizzesLoading || quizzes.length > 0)"
-    >
-      <div class="sec-title">
-        Quizzes
-      </div>
-
-      <div
-        class="state-message"
-        *ngIf="quizzesLoading"
-      >
-        Loading quizzes…
-      </div>
-
-      <div
-        class="quiz-row"
-        *ngFor="let quiz of quizzes"
-      >
-        <span class="icon">
-          📝
-        </span>
-
+    <section class="quizzes-section" *ngIf="enrolled && (quizzesLoading || quizzes.length > 0)">
+      <div class="sec-title">Quizzes</div>
+      <div class="state-message" *ngIf="quizzesLoading">Loading quizzes…</div>
+      <div class="quiz-row" *ngFor="let quiz of quizzes">
+        <span class="icon">📝</span>
         <div class="quiz-info">
-          <div class="quiz-name">
-            {{ quiz.title }}
-          </div>
-
-          <div class="quiz-sub">
-            {{ quiz.durationMinutes }} min ·
-            {{ quiz.totalQuestions }} questions ·
-            Pass {{ quiz.passPercent }}%
-          </div>
-
-          <div
-            class="quiz-lock-note"
-            *ngIf="!assessmentUnlocked"
-          >
-            Complete all course lessons to unlock this quiz.
-          </div>
+          <div class="quiz-name">{{ quiz.title }}</div>
+          <div class="quiz-sub">{{ quiz.durationMinutes }} min · {{ quiz.totalQuestions }} questions · Pass {{ quiz.passPercent }}%</div>
+          <div class="quiz-lock-note" *ngIf="!assessmentUnlocked">Complete all course lessons to unlock this quiz.</div>
         </div>
-
-        <a
-          *ngIf="assessmentUnlocked"
-          class="btn btn-outline"
-          [routerLink]="['/learn/quiz', quiz.id]"
-        >
-          Start
-        </a>
-
-        <button
-          *ngIf="!assessmentUnlocked"
-          class="btn btn-outline quiz-locked-button"
-          disabled
-        >
-          🔒 Locked
-        </button>
+        <a *ngIf="assessmentUnlocked" class="btn btn-outline" [routerLink]="['/learn/quiz', quiz.id]">Start</a>
+        <button *ngIf="!assessmentUnlocked" class="btn btn-outline quiz-locked-button" disabled>🔒 Locked</button>
       </div>
     </section>
 
-    <section
-      id="course-content"
-      class="content-section"
-    >
+    <section id="course-content" class="content-section">
       <div class="content-section-heading">
-        <div>
-          <h2>Course content</h2>
-
-          <p>
-            {{ totalLessons }} lessons
-
-            <span *ngIf="enrolled">
-              · {{ completedLessons }} completed
-            </span>
-
-            <span *ngIf="!enrolled">
-              · Enroll to access full course content
-            </span>
-          </p>
-        </div>
-
-        <span
-          *ngIf="!enrolled"
-          class="preview-note"
-        >
-          🔒 Content locked until enrollment
-        </span>
+        <div><h2>Course content</h2><p>{{ totalLessons }} lessons <span *ngIf="enrolled">· {{ completedLessons }} completed</span><span *ngIf="!enrolled">· Enroll to access full course content</span></p></div>
+        <span *ngIf="!enrolled" class="preview-note">🔒 Content locked until enrollment</span>
       </div>
 
       <div class="content-layout">
         <div class="module-list">
-          <div
-            class="module"
-            *ngFor="
-              let module of modules;
-              let moduleIndex = index
-            "
-          >
-            <div
-              class="module-header"
-              (click)="toggleModule(module)"
-            >
-              <div>
-                <span>
-                  Module {{ moduleIndex + 1 }} —
-                  {{ module.title }}
-                </span>
-
-                <small *ngIf="module.description">
-                  {{ module.description }}
-                </small>
-              </div>
-
-              <span class="lesson-count">
-                {{ module.lessons.length }} lesson(s)
-              </span>
+          <div class="module" *ngFor="let module of modules; let moduleIndex = index">
+            <div class="module-header" (click)="toggleModule(module)">
+              <div><span>Module {{ moduleIndex + 1 }} — {{ module.title }}</span><small *ngIf="module.description">{{ module.description }}</small></div>
+              <span class="lesson-count">{{ module.lessons.length }} lesson(s)</span>
             </div>
 
             <div *ngIf="module.expanded">
-              <div
-                class="lesson-row"
-                *ngFor="
-                  let lesson of module.lessons;
-                  let lessonIndex = index
-                "
-                [class.active]="selectedLesson?.id === lesson.id"
-                [class.locked]="isLockedLesson(lesson)"
-                [class.completed]="lesson.completed"
-                (click)="openLesson(lesson)"
-              >
-                <span class="icon lesson-icon">
-                  {{ lessonIcon(lesson) }}
-                </span>
-
-                <span class="lesson-name">
-                  Lesson {{ lessonIndex + 1 }} —
-                  {{ lesson.title }}
-
-                  <small
-                    *ngIf="lesson.isPreview && !enrolled"
-                  >
-                    Preview
-                  </small>
-
-                  <small *ngIf="isLockedLesson(lesson)">
-                    Locked — enroll to access
-                  </small>
-                </span>
-
-                <span
-                  class="lesson-progress-label"
-                  [class.done]="lesson.completed"
-                >
-                  {{ lessonStatusLabel(lesson) }}
-                </span>
+              <div class="lesson-row" *ngFor="let lesson of module.lessons; let lessonIndex = index" [class.active]="selectedLesson?.id === lesson.id" [class.locked]="isLockedLesson(lesson)" [class.completed]="lesson.completed" (click)="openLesson(lesson)">
+                <span class="icon lesson-icon">{{ lessonIcon(lesson) }}</span>
+                <span class="lesson-name">Lesson {{ lessonIndex + 1 }} — {{ lesson.title }}<small *ngIf="lesson.isPreview && !enrolled">Preview</small><small *ngIf="isLockedLesson(lesson)">Locked — enroll to access</small></span>
+                <span class="lesson-progress-label" [class.done]="lesson.completed">{{ lessonStatusLabel(lesson) }}</span>
               </div>
             </div>
           </div>
-
-          <div
-            class="state-message"
-            *ngIf="modules.length === 0"
-          >
-            No lessons have been added to this course yet.
-          </div>
+          <div class="state-message" *ngIf="modules.length === 0">No lessons have been added to this course yet.</div>
         </div>
 
         <div class="viewer">
-          <div
-            *ngIf="!selectedLesson && !enrolled"
-            id="course-access-message"
-            class="viewer-empty course-access-message"
-          >
-            <div class="viewer-empty-icon">
-              🔒
+          <div *ngIf="!selectedLesson && !enrolled" id="course-access-message" class="viewer-empty course-access-message"><div class="viewer-empty-icon">🔒</div><strong>Course content is locked</strong><span>Enroll in this course to access the full content.</span><button type="button" class="btn btn-primary" [disabled]="enrolling || paymentLoading" (click)="enroll()">{{ enrolling || paymentLoading ? 'Processing...' : isPaid ? 'Pay now to enroll' : 'Enroll Now — Free' }}</button><span *ngIf="isPaid" class="paid-access-message">Pay securely online to unlock this course.</span></div>
+
+          <div *ngIf="!selectedLesson && enrolled" class="viewer-empty"><div class="viewer-empty-icon">▶</div><strong>Select a lesson to begin</strong><span>Your lesson progress is saved automatically.</span></div>
+
+          <div *ngIf="selectedLesson && (enrolled || selectedLesson.isPreview)">
+            <div class="viewer-heading">
+              <div><span class="viewer-type">{{ selectedLesson.type }}</span><h3>{{ selectedLesson.title }}</h3></div>
+              <span class="badge badge-gr" *ngIf="selectedLesson.completed">Completed</span>
+              <span class="badge badge-gr" *ngIf="selectedLesson.isPreview && !enrolled">Preview</span>
             </div>
 
-            <strong>
-              Course content is locked
-            </strong>
+            <p *ngIf="selectedLesson.description" class="lesson-description">{{ selectedLesson.description }}</p>
 
-            <span>
-              Enroll in this course to access the full content.
-            </span>
+            <div class="lesson-view-progress" *ngIf="enrolled && selectedLesson.progressPercent > 0">
+              <span>{{ selectedLesson.progressPercent }}% completed</span>
+              <div class="prog"><div class="prog-fill" [style.width.%]="selectedLesson.progressPercent" [style.background]="'var(--gr)'"></div></div>
+            </div>
 
             <button
+              *ngIf="selectedLesson && selectedLesson.downloadable === true"
               type="button"
-              class="btn btn-primary"
-              [disabled]="enrolling || paymentLoading"
-              (click)="enroll()"
-            >
-              {{
-                enrolling || paymentLoading
-                  ? 'Processing...'
-                  : isPaid
-                    ? 'Pay now to enroll'
-                    : 'Enroll Now — Free'
-              }}
+              class="btn btn-outline download-btn"
+              [disabled]="downloadingLessonId === selectedLesson.id"
+              (click)="downloadSelectedLesson()">
+              {{ downloadingLessonId === selectedLesson.id ? 'Downloading…' : '⬇ Download lesson' }}
             </button>
 
-            <span
-              *ngIf="isPaid"
-              class="paid-access-message"
-            >
-              Pay securely online to unlock this course.
-            </span>
-          </div>
-
-          <div
-            *ngIf="!selectedLesson && enrolled"
-            class="viewer-empty"
-          >
-            <div class="viewer-empty-icon">
-              ▶
-            </div>
-
-            <strong>
-              Select a lesson to begin
-            </strong>
-
-            <span>
-              Your lesson progress is saved automatically.
-            </span>
-          </div>
-
-          <div
-            *ngIf="
-              selectedLesson &&
-              (enrolled || selectedLesson.isPreview)
-            "
-          >
-            <div class="viewer-heading">
-              <div>
-                <span class="viewer-type">
-                  {{ selectedLesson.type }}
-                </span>
-
-                <h3>
-                  {{ selectedLesson.title }}
-                </h3>
-              </div>
-
-              <span
-                class="badge badge-gr"
-                *ngIf="selectedLesson.completed"
-              >
-                Completed
-              </span>
-
-              <span
-                class="badge badge-gr"
-                *ngIf="selectedLesson.isPreview && !enrolled"
-              >
-                Preview
-              </span>
-            </div>
-
-            <p
-              *ngIf="selectedLesson.description"
-              class="lesson-description"
-            >
-              {{ selectedLesson.description }}
-            </p>
-
-            <div
-              class="lesson-view-progress"
-              *ngIf="enrolled && selectedLesson.progressPercent > 0"
-            >
-              <span>
-                {{ selectedLesson.progressPercent }}% completed
-              </span>
-
-              <div class="prog">
-                <div
-                  class="prog-fill"
-                  [style.width.%]="selectedLesson.progressPercent"
-                  [style.background]="'var(--gr)'"
-                ></div>
-              </div>
-            </div>
-
             <ng-container *ngIf="selectedLesson.type === 'VIDEO'">
-              <video
-                #videoPlayer
-                *ngIf="lessonUrl(selectedLesson)"
-                [src]="lessonUrl(selectedLesson)"
-                controls
-                class="video-viewer"
-                (loadedmetadata)="onMediaLoaded(videoPlayer)"
-                (timeupdate)="onMediaTimeUpdate(videoPlayer)"
-                (pause)="onMediaPause(videoPlayer)"
-                (ended)="onMediaEnded(videoPlayer)"
-              ></video>
-
-              <div
-                class="document-empty"
-                *ngIf="!lessonUrl(selectedLesson)"
-              >
-                Video content is not available.
-              </div>
+              <video #videoPlayer *ngIf="lessonUrl(selectedLesson)" [src]="lessonUrl(selectedLesson)" controls class="video-viewer" (loadedmetadata)="onMediaLoaded(videoPlayer)" (timeupdate)="onMediaTimeUpdate(videoPlayer)" (pause)="onMediaPause(videoPlayer)" (ended)="onMediaEnded(videoPlayer)"></video>
+              <div class="document-empty" *ngIf="!lessonUrl(selectedLesson)">Video content is not available.</div>
             </ng-container>
 
             <ng-container *ngIf="selectedLesson.type === 'AUDIO'">
-              <audio
-                #audioPlayer
-                *ngIf="lessonUrl(selectedLesson)"
-                [src]="lessonUrl(selectedLesson)"
-                controls
-                class="audio-viewer"
-                (loadedmetadata)="onMediaLoaded(audioPlayer)"
-                (timeupdate)="onMediaTimeUpdate(audioPlayer)"
-                (pause)="onMediaPause(audioPlayer)"
-                (ended)="onMediaEnded(audioPlayer)"
-              ></audio>
-
-              <div
-                class="document-empty"
-                *ngIf="!lessonUrl(selectedLesson)"
-              >
-                Audio content is not available.
-              </div>
+              <audio #audioPlayer *ngIf="lessonUrl(selectedLesson)" [src]="lessonUrl(selectedLesson)" controls class="audio-viewer" (loadedmetadata)="onMediaLoaded(audioPlayer)" (timeupdate)="onMediaTimeUpdate(audioPlayer)" (pause)="onMediaPause(audioPlayer)" (ended)="onMediaEnded(audioPlayer)"></audio>
+              <div class="document-empty" *ngIf="!lessonUrl(selectedLesson)">Audio content is not available.</div>
             </ng-container>
 
-            <ng-container
-              *ngIf="
-                selectedLesson.type === 'PDF' ||
-                selectedLesson.type === 'SLIDES'
-              "
-            >
-              <div
-                class="document-frame-wrapper"
-                *ngIf="documentUrl(selectedLesson)"
-              >
-                <iframe
-                  [src]="safeUrl(documentUrl(selectedLesson))"
-                  class="document-viewer"
-                  title="Lesson document"
-                ></iframe>
-              </div>
-
-              <div
-                class="document-empty"
-                *ngIf="!documentUrl(selectedLesson)"
-              >
-                Document content is not available.
-              </div>
+            <ng-container *ngIf="selectedLesson.type === 'PDF' || selectedLesson.type === 'SLIDES'">
+              <div class="document-frame-wrapper" #docFrame *ngIf="documentUrl(selectedLesson)"><div class="document-toolbar"><button type="button" class="fullscreen-btn" (click)="toggleDocumentFullscreen(docFrame)">{{ documentFullscreen ? '✕ Exit full screen' : '⛶ Full screen' }}</button></div><iframe [src]="safeUrl(documentUrl(selectedLesson))" class="document-viewer" title="Lesson document"></iframe></div>
+              <div class="document-empty" *ngIf="!documentUrl(selectedLesson)">Document content is not available.</div>
             </ng-container>
 
             <ng-container *ngIf="selectedLesson.type === 'TEXT'">
-              <div
-                *ngIf="
-                  selectedLesson.textContent &&
-                  selectedLesson.textContent.trim().length > 0;
-                  else noTextContent
-                "
-                class="text-content"
-              >
-                {{ selectedLesson.textContent }}
-              </div>
-
-              <ng-template #noTextContent>
-                <div class="document-empty">
-                  Text content is not available.
-                </div>
-              </ng-template>
+              <div *ngIf="selectedLesson.textContent && selectedLesson.textContent.trim().length > 0; else noTextContent" class="text-content">{{ selectedLesson.textContent }}</div>
+              <ng-template #noTextContent><div class="document-empty">Text content is not available.</div></ng-template>
             </ng-container>
 
-            <button
-              *ngIf="
-                enrolled &&
-                isManualCompletionLesson(selectedLesson)
-              "
-              class="btn btn-primary complete-button"
-              [disabled]="selectedLesson.completed || completionSaving"
-              (click)="markSelectedLessonCompleted()"
-            >
-              {{
-                selectedLesson.completed
-                  ? '✓ Lesson completed'
-                  : completionSaving
-                    ? 'Saving…'
-                    : 'Mark lesson as complete'
-              }}
-            </button>
+            <button *ngIf="enrolled && isManualCompletionLesson(selectedLesson)" class="btn btn-primary complete-button" [disabled]="selectedLesson.completed || completionSaving" (click)="markSelectedLessonCompleted()">{{ selectedLesson.completed ? '✓ Lesson completed' : completionSaving ? 'Saving…' : 'Mark lesson as complete' }}</button>
           </div>
         </div>
       </div>
@@ -648,11 +169,4 @@
   </ng-container>
 </div>
 
-<div
-  class="page"
-  *ngIf="loading"
->
-  <div class="state-message">
-    Loading course…
-  </div>
-</div>
+<div class="page" *ngIf="loading"><div class="state-message">Loading course…</div></div>

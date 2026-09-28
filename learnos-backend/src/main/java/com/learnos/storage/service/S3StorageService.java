@@ -2,6 +2,8 @@ package com.learnos.storage.service;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -57,6 +59,28 @@ public class S3StorageService {
         if (mimeType.equals("application/pdf")) return "documents";
         if (mimeType.contains("presentation") || mimeType.contains("powerpoint")) return "slides";
         return "misc";
+    }
+
+    /**
+     * Resolves a stored file URL ("/files/folder/x.ext", or an old-style absolute URL)
+     * to a readable file on disk. Rejects anything that escapes the storage root.
+     */
+    public Resource loadAsResource(String fileUrl) {
+        int idx = fileUrl.indexOf("/files/");
+        String afterFiles = idx != -1
+                ? fileUrl.substring(idx + "/files/".length())
+                : fileUrl;
+
+        Path root = Paths.get(basePath).toAbsolutePath().normalize();
+        Path filePath = root.resolve(afterFiles).normalize();
+
+        if (!filePath.startsWith(root)) {
+            throw new RuntimeException("Invalid file path");
+        }
+        if (!Files.isRegularFile(filePath) || !Files.isReadable(filePath)) {
+            throw new RuntimeException("File not found");
+        }
+        return new FileSystemResource(filePath);
     }
 
     public void deleteFile(String fileUrl) {
