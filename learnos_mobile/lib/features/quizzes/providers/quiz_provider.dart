@@ -1,4 +1,6 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+
 import '../models/quiz_model.dart';
 import '../services/quiz_service.dart';
 
@@ -7,7 +9,7 @@ class QuizProvider extends ChangeNotifier {
 
   QuizModel? _quiz;
   int _currentIndex = 0;
-  final Map<String, String> _answers = {}; // questionId -> optionId
+  final Map<String, String> _answers = {};
 
   bool _loading = false;
   bool _submitting = false;
@@ -29,9 +31,42 @@ class QuizProvider extends ChangeNotifier {
           : null;
 
   bool get isLastQuestion =>
-      _quiz != null && _currentIndex == _quiz!.questions.length - 1;
+      _quiz != null &&
+      _currentIndex == _quiz!.questions.length - 1;
 
   int get answeredCount => _answers.length;
+
+  String _extractErrorMessage(Object error) {
+    if (error is DioException) {
+      final responseData = error.response?.data;
+
+      if (responseData is Map) {
+        for (final key in ['message', 'error', 'detail']) {
+          final value = responseData[key];
+
+          if (value is String && value.trim().isNotEmpty) {
+            return value.trim();
+          }
+        }
+      }
+
+      final dioMessage = error.message;
+
+      if (dioMessage != null && dioMessage.trim().isNotEmpty) {
+        return dioMessage.trim();
+      }
+    }
+
+    final message = error.toString().trim();
+
+    if (message.startsWith('Exception: ')) {
+      return message.substring('Exception: '.length).trim();
+    }
+
+    return message.isEmpty
+        ? 'Something went wrong. Please try again.'
+        : message;
+  }
 
   Future<void> loadQuiz(String quizId) async {
     _loading = true;
@@ -41,11 +76,13 @@ class QuizProvider extends ChangeNotifier {
     _currentIndex = 0;
     _answers.clear();
     notifyListeners();
+
     try {
       _quiz = await _service.getQuizToTake(quizId);
-    } catch (e) {
-      _error = e.toString();
+    } catch (error) {
+      _error = _extractErrorMessage(error);
     }
+
     _loading = false;
     notifyListeners();
   }
@@ -57,6 +94,7 @@ class QuizProvider extends ChangeNotifier {
 
   void nextQuestion() {
     if (_quiz == null) return;
+
     if (_currentIndex < _quiz!.questions.length - 1) {
       _currentIndex++;
       notifyListeners();
@@ -72,19 +110,22 @@ class QuizProvider extends ChangeNotifier {
 
   Future<bool> submit() async {
     if (_quiz == null) return false;
+
     _submitting = true;
     _error = null;
     notifyListeners();
+
     try {
       _result = await _service.submitAttempt(
         quizId: _quiz!.id,
         answers: _answers,
       );
+
       _submitting = false;
       notifyListeners();
       return true;
-    } catch (e) {
-      _error = e.toString();
+    } catch (error) {
+      _error = _extractErrorMessage(error);
       _submitting = false;
       notifyListeners();
       return false;

@@ -37,9 +37,17 @@ class _QuizScreenState extends State<QuizScreen> {
 
     return normalized.contains('complete all course lessons') ||
         normalized.contains('complete all lessons') ||
-        normalized.contains('assessment') &&
-            normalized.contains('complete') ||
+        (normalized.contains('assessment') &&
+            normalized.contains('complete')) ||
         normalized.contains('assessment is unavailable');
+  }
+
+  bool _isAssessmentAlreadyPassed(String? error) {
+    final normalized = (error ?? '').toLowerCase();
+
+    return normalized.contains('already been passed') ||
+        normalized.contains('assessment already passed') ||
+        normalized.contains('already passed');
   }
 
   String _lockedMessage(String? error) {
@@ -70,9 +78,21 @@ class _QuizScreenState extends State<QuizScreen> {
           }
 
           if (provider.error != null && provider.quiz == null) {
+            if (_isAssessmentAlreadyPassed(provider.error)) {
+              return _AssessmentLockedView(
+                message: 'This assessment has already been passed.',
+                subtitle:
+                    'You cannot retake an assessment that has already been passed.',
+                onBack: () => Navigator.of(context).pop(),
+                onRetry: () => provider.loadQuiz(widget.quizId),
+              );
+            }
+
             if (_isAssessmentLocked(provider.error)) {
               return _AssessmentLockedView(
                 message: _lockedMessage(provider.error),
+                subtitle:
+                    'Return to the course, complete every lesson, then try again.',
                 onBack: () => Navigator.of(context).pop(),
                 onRetry: () => provider.loadQuiz(widget.quizId),
               );
@@ -113,11 +133,13 @@ class _QuizScreenState extends State<QuizScreen> {
 
 class _AssessmentLockedView extends StatelessWidget {
   final String message;
+  final String subtitle;
   final VoidCallback onBack;
   final VoidCallback onRetry;
 
   const _AssessmentLockedView({
     required this.message,
+    required this.subtitle,
     required this.onBack,
     required this.onRetry,
   });
@@ -161,7 +183,7 @@ class _AssessmentLockedView extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Return to the course, complete every lesson, then try again.',
+                subtitle,
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.textMuted,
                 ),
@@ -208,10 +230,6 @@ class _QuizLoadErrorView extends StatelessWidget {
 
     if (cleaned.isEmpty) {
       return 'Could not load this quiz. Please try again.';
-    }
-
-    if (cleaned.contains('status code of 400')) {
-      return 'Could not open this quiz. Please return to the course and try again.';
     }
 
     return cleaned;
@@ -279,7 +297,8 @@ class _QuestionView extends StatelessWidget {
     final quiz = provider.quiz!;
     final question = provider.currentQuestion!;
     final selected = provider.answers[question.id];
-    final progress = (provider.currentIndex + 1) / quiz.questions.length;
+    final progress =
+        (provider.currentIndex + 1) / quiz.questions.length;
 
     return SafeArea(
       child: Padding(
@@ -300,7 +319,8 @@ class _QuestionView extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             Text(
-              'Question ${provider.currentIndex + 1} of ${quiz.questions.length}',
+              'Question ${provider.currentIndex + 1} of '
+              '${quiz.questions.length}',
               style: AppTextStyles.caption.copyWith(
                 color: AppColors.textSecondary,
               ),
@@ -379,7 +399,8 @@ class _QuestionView extends StatelessWidget {
                       onPressed: provider.previousQuestion,
                     ),
                   ),
-                if (provider.currentIndex > 0) const SizedBox(width: 12),
+                if (provider.currentIndex > 0)
+                  const SizedBox(width: 12),
                 Expanded(
                   child: AppButton(
                     text: provider.isLastQuestion ? 'Submit' : 'Next',
@@ -387,12 +408,12 @@ class _QuestionView extends StatelessWidget {
                     onPressed: selected == null
                         ? null
                         : () {
-                      if (provider.isLastQuestion) {
-                        provider.submit();
-                      } else {
-                        provider.nextQuestion();
-                      }
-                    },
+                            if (provider.isLastQuestion) {
+                              provider.submit();
+                            } else {
+                              provider.nextQuestion();
+                            }
+                          },
                   ),
                 ),
               ],
@@ -437,7 +458,7 @@ class _ResultView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               '${result.scorePercent}% · '
-                  '${result.correctCount}/${result.totalQuestions} correct',
+              '${result.correctCount}/${result.totalQuestions} correct',
               style: AppTextStyles.body.copyWith(
                 color: AppColors.textSecondary,
               ),

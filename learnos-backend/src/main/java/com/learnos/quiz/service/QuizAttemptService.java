@@ -56,6 +56,7 @@ public class QuizAttemptService {
         Quiz quiz = findPublishedQuizOrThrow(quizId);
         User currentUser = requireCurrentUser();
 
+        assertNotAlreadyPassed(currentUser, quiz);
         assertAssessmentUnlocked(currentUser, quiz);
 
         List<QuestionTakeResponse> questions = quiz.getQuestions().stream()
@@ -87,6 +88,7 @@ public class QuizAttemptService {
         Quiz quiz = findPublishedQuizOrThrow(request.quizId());
         User currentUser = requireCurrentUser();
 
+        assertNotAlreadyPassed(currentUser, quiz);
         assertAssessmentUnlocked(currentUser, quiz);
 
         Map<String, String> answers = request.answers() != null
@@ -178,6 +180,33 @@ public class QuizAttemptService {
                         attempt.getSubmittedAt()
                 ))
                 .toList();
+    }
+
+    private void assertNotAlreadyPassed(
+            User currentUser,
+            Quiz quiz
+    ) {
+        if (
+                currentUser == null
+                        || currentUser.getId() == null
+                        || quiz == null
+                        || quiz.getId() == null
+        ) {
+            return;
+        }
+
+        boolean alreadyPassed =
+                quizAttemptRepository
+                        .existsByQuiz_IdAndUser_IdAndPassedTrue(
+                                quiz.getId(),
+                                currentUser.getId()
+                        );
+
+        if (alreadyPassed) {
+            throw new IllegalStateException(
+                    "This assessment has already been passed."
+            );
+        }
     }
 
     private Quiz findPublishedQuizOrThrow(UUID quizId) {
