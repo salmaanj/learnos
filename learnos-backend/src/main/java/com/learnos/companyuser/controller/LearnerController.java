@@ -1,5 +1,6 @@
 package com.learnos.companyuser.controller;
 
+import com.learnos.auth.service.AuthorizationService;
 import com.learnos.companyuser.dto.LearnerEnrollmentResponse;
 import com.learnos.companyuser.dto.LearnerResponse;
 import com.learnos.companyuser.service.LearnerService;
@@ -17,19 +18,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/learners")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN','TUTOR','USER')")
 public class LearnerController {
 
     private final LearnerService learnerService;
+    private final AuthorizationService authorizationService;
 
     @GetMapping
+    @PreAuthorize("@authorizationService.hasPermission(authentication, 'LEARNERS_VIEW')")
     public ResponseEntity<List<LearnerResponse>> getAll() {
         return ResponseEntity.ok(learnerService.getLearners());
     }
 
     @GetMapping("/{learnerId}/enrollments")
-    public ResponseEntity<List<LearnerEnrollmentResponse>>
-    getLearnerEnrollments(
+    @PreAuthorize("@authorizationService.hasPermission(authentication, 'LEARNERS_VIEW')")
+    public ResponseEntity<List<LearnerEnrollmentResponse>> getLearnerEnrollments(
             @PathVariable UUID learnerId
     ) {
         return ResponseEntity.ok(

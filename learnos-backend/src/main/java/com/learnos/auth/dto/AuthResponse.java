@@ -4,6 +4,7 @@ import com.learnos.auth.model.Role;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
 import java.util.UUID;
 
 @Data
@@ -36,5 +37,8 @@ public class AuthResponse {
         private String companyPrimaryColor;
         private String companySecondaryColor;
         private String companyAccentColor;
+
+        @Builder.Default
+        private List<String> permissions = List.of();
     }
 }

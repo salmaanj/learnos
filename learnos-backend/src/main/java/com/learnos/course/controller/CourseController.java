@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -76,6 +75,9 @@ public class CourseController {
     }
 
     @GetMapping("/courses")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_VIEW')"
+    )
     public ResponseEntity<ApiResponse<Page<CourseResponse>>> getCourses(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "12") int size,
@@ -99,6 +101,9 @@ public class CourseController {
     }
 
     @GetMapping("/courses/search")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_VIEW')"
+    )
     public ResponseEntity<ApiResponse<Page<CourseResponse>>> searchCourses(
             @RequestParam String q,
             @RequestParam(defaultValue = "0") int page,
@@ -119,6 +124,9 @@ public class CourseController {
     }
 
     @GetMapping("/courses/category/{categoryId}")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_VIEW')"
+    )
     public ResponseEntity<ApiResponse<Page<CourseResponse>>> getCoursesByCategory(
             @PathVariable UUID categoryId,
             @RequestParam(defaultValue = "0") int page,
@@ -220,6 +228,9 @@ public class CourseController {
     }
 
     @GetMapping("/courses/{id}")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_VIEW')"
+    )
     public ResponseEntity<ApiResponse<CourseResponse>> getCourse(
             @PathVariable UUID id
     ) {
@@ -267,7 +278,9 @@ public class CourseController {
     }
 
     @PostMapping("/courses")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_CREATE')"
+    )
     public ResponseEntity<ApiResponse<CourseResponse>> createCourse(
             @Valid @RequestBody CourseRequest request,
             @AuthenticationPrincipal UserDetails userDetails
@@ -287,7 +300,9 @@ public class CourseController {
     }
 
     @PutMapping("/courses/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_UPDATE')"
+    )
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(
             @PathVariable UUID id,
             @Valid @RequestBody CourseRequest request,
@@ -324,7 +339,9 @@ public class CourseController {
             value = "/courses/{id}/thumbnail",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_UPDATE')"
+    )
     public ResponseEntity<ApiResponse<String>> uploadThumbnail(
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file
@@ -338,6 +355,9 @@ public class CourseController {
     }
 
     @GetMapping("/courses/{courseId}/modules")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_VIEW')"
+    )
     public ResponseEntity<ApiResponse<List<ModuleResponse>>> getModules(
             @PathVariable UUID courseId
     ) {
@@ -349,7 +369,9 @@ public class CourseController {
     }
 
     @PostMapping("/courses/{courseId}/modules")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_UPDATE')"
+    )
     public ResponseEntity<ApiResponse<ModuleResponse>> addModule(
             @PathVariable UUID courseId,
             @Valid @RequestBody ModuleRequest request
@@ -364,7 +386,9 @@ public class CourseController {
     }
 
     @PutMapping("/courses/{courseId}/modules/{moduleId}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_UPDATE')"
+    )
     public ResponseEntity<ApiResponse<ModuleResponse>> updateModule(
             @PathVariable UUID courseId,
             @PathVariable UUID moduleId,
@@ -383,7 +407,9 @@ public class CourseController {
     }
 
     @DeleteMapping("/courses/{courseId}/modules/{moduleId}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_UPDATE')"
+    )
     public ResponseEntity<ApiResponse<String>> deleteModule(
             @PathVariable UUID courseId,
             @PathVariable UUID moduleId
@@ -425,7 +451,9 @@ public class CourseController {
     }
 
     @PostMapping("/courses/{courseId}/modules/{moduleId}/lessons")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(
+            "@authorizationService.hasPermission(authentication, 'COURSES_UPDATE')"
+    )
     public ResponseEntity<ApiResponse<LessonResponse>> addLesson(
             @PathVariable UUID courseId,
             @PathVariable UUID moduleId,
@@ -473,7 +501,7 @@ public class CourseController {
                                         : null
                         )
                 )
-        );
+                );
     }
 
     @GetMapping("/categories/{id}")
@@ -486,7 +514,7 @@ public class CourseController {
     }
 
     @PutMapping("/categories/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER')")
+    @PreAuthorize("@authorizationService.hasPermission(authentication, 'COURSES_VIEW')")
     public ResponseEntity<ApiResponse<CategoryResponse>> updateCategory(
             @PathVariable UUID id,
             @RequestBody CategoryRequest request

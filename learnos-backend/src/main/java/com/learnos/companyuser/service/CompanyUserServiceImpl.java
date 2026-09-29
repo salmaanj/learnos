@@ -42,9 +42,7 @@ public class CompanyUserServiceImpl implements CompanyUserService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public CompanyUserResponse createCompanyUser(
-            UserCreateRequest request
-    ) {
+    public CompanyUserResponse createCompanyUser(UserCreateRequest request) {
         User currentUser = getCurrentUser();
         ensureCanCreate(currentUser);
 
@@ -101,6 +99,7 @@ public class CompanyUserServiceImpl implements CompanyUserService {
         ensureCanAccess(currentUser, companyUser);
 
         User user = companyUser.getUser();
+
         if (user == null) {
             throw new IllegalArgumentException("Associated user not found");
         }
@@ -137,11 +136,10 @@ public class CompanyUserServiceImpl implements CompanyUserService {
                 && request.companyId() != null
                 && !request.companyId().isBlank()) {
             company = companyRepository.findById(
-                            UUID.fromString(request.companyId().trim())
-                    )
-                    .orElseThrow(() -> new IllegalArgumentException(
-                            "Company not found"
-                    ));
+                    UUID.fromString(request.companyId().trim())
+            ).orElseThrow(() -> new IllegalArgumentException(
+                    "Company not found"
+            ));
         }
 
         user.setCompany(company);
@@ -157,12 +155,11 @@ public class CompanyUserServiceImpl implements CompanyUserService {
 
         companyUser.setCompany(company);
         companyUser.setRole(roleResolution.displayRole());
-        companyUser.setStatus(
-                request.status() != null
-                        && !request.status().isBlank()
-                        ? request.status().trim()
-                        : companyUser.getStatus()
-        );
+
+        if (request.status() != null
+                && !request.status().isBlank()) {
+            companyUser.setStatus(request.status().trim());
+        }
 
         return toResponse(companyUserRepository.save(companyUser));
     }
@@ -179,7 +176,8 @@ public class CompanyUserServiceImpl implements CompanyUserService {
                     .toList();
         }
 
-        if (currentUser.getCompany() == null) {
+        if (currentUser == null
+                || currentUser.getCompany() == null) {
             return List.of();
         }
 
@@ -210,7 +208,8 @@ public class CompanyUserServiceImpl implements CompanyUserService {
     ) {
         if (isLearnerRequest(request)) {
             if (!isSuperAdmin(currentUser)
-                    && currentUser.getRole() != Role.USER) {
+                    && currentUser.getRole() != Role.USER
+                    && currentUser.getRole() != Role.ADMIN) {
                 throw new IllegalArgumentException(
                         "Learner accounts must be created through the learner workflow"
                 );
@@ -296,25 +295,22 @@ public class CompanyUserServiceImpl implements CompanyUserService {
     }
 
     private RoleResolution toRoleResolution(DynamicRole dynamicRole) {
+        String dynamicName = dynamicRole.getName().trim();
+
         Role legacyRole;
 
         try {
             legacyRole = Role.valueOf(
-                    dynamicRole.getName()
-                            .trim()
-                            .toUpperCase()
+                    dynamicName.toUpperCase()
             );
         } catch (IllegalArgumentException ex) {
-            throw new IllegalArgumentException(
-                    "Dynamic role must match a supported staff role: "
-                            + dynamicRole.getName()
-            );
+            legacyRole = Role.USER;
         }
 
         return new RoleResolution(
                 legacyRole,
                 dynamicRole,
-                dynamicRole.getName()
+                dynamicName
         );
     }
 
@@ -346,7 +342,8 @@ public class CompanyUserServiceImpl implements CompanyUserService {
                     ));
         }
 
-        if (currentUser.getCompany() == null) {
+        if (currentUser == null
+                || currentUser.getCompany() == null) {
             throw new IllegalArgumentException(
                     "User is not assigned to a company"
             );
@@ -400,7 +397,8 @@ public class CompanyUserServiceImpl implements CompanyUserService {
                 SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication == null
-                || authentication.getName() == null) {
+                || authentication.getName() == null
+                || authentication.getName().isBlank()) {
             return null;
         }
 

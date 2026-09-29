@@ -27,10 +27,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.io.IOException;
 import java.util.Set;
@@ -56,10 +56,13 @@ public class ContentLibraryController {
             "status"
     );
 
+    private static final String CONTENT_LIBRARY_PERMISSION =
+            "@authorizationService.hasPermission(authentication, 'CONTENT_LIBRARY_MANAGE')";
+
     private final ContentLibraryService contentLibraryService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<Page<ContentLibraryResponse>>> getItems(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) ContentLibraryItemType type,
@@ -94,7 +97,7 @@ public class ContentLibraryController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<ContentLibraryResponse>> getItem(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails
@@ -110,7 +113,7 @@ public class ContentLibraryController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<ContentLibraryResponse>> createItem(
             @Valid @RequestBody ContentLibraryCreateRequest request,
             @AuthenticationPrincipal UserDetails userDetails
@@ -128,7 +131,7 @@ public class ContentLibraryController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<ContentLibraryResponse>> updateItem(
             @PathVariable UUID id,
             @Valid @RequestBody ContentLibraryUpdateRequest request,
@@ -150,7 +153,7 @@ public class ContentLibraryController {
             value = "/{id}/upload",
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<ContentLibraryResponse>> uploadFile(
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file,
@@ -169,7 +172,7 @@ public class ContentLibraryController {
     }
 
     @PatchMapping("/{id}/archive")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<ContentLibraryResponse>> archiveItem(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails
@@ -186,7 +189,7 @@ public class ContentLibraryController {
     }
 
     @PatchMapping("/{id}/restore")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<ContentLibraryResponse>> restoreItem(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails
@@ -203,7 +206,7 @@ public class ContentLibraryController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(CONTENT_LIBRARY_PERMISSION)
     public ResponseEntity<ApiResponse<Void>> deleteItem(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails

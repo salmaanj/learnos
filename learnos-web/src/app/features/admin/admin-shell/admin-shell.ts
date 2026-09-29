@@ -218,31 +218,48 @@ export class AdminShell implements OnInit {
       && !this.authService.isSubscriptionActive();
   }
 
-  shouldShowNavItem(label: string): boolean {
-    if (
-      this.isPendingCompanyAdmin
-      && label !== 'Plans'
-    ) {
-      return false;
-    }
+shouldShowNavItem(label: string): boolean {
+  if (label === 'Roles') {
+    return this.canViewRoles;
+  }
 
-    if (label === 'Roles') {
-      return this.canViewRoles;
-    }
+  if (this.isPendingCompanyAdmin) {
+    return label === 'Plans';
+  }
 
-    if (label === 'My Live Classes') {
-      return this.canViewMyLiveClasses;
-    }
-
-    if (label === 'Plans') {
-      const role = this.getResolvedRole();
-
-      return role === 'SUPER_ADMIN'
-        || role === 'ADMIN';
-    }
-
+  if (this.authService.isSuperAdmin()) {
     return true;
   }
+
+  if (this.getResolvedRole() === 'ADMIN') {
+    return true;
+  }
+
+  // keep the existing permissionByLabel code below
+
+  const permissionByLabel: Record<string, string> = {
+    'All courses': 'COURSES_VIEW',
+    'Course builder': 'COURSES_UPDATE',
+    'Content library': 'CONTENT_LIBRARY_MANAGE',
+    'Categories': 'COURSES_VIEW',
+    'Live classes': 'LIVE_CLASSES_VIEW',
+    'My Live Classes': 'LIVE_CLASSES_VIEW',
+    'Learners': 'LEARNERS_VIEW',
+    'Batches & groups': 'BATCHES_VIEW',
+    'Tests & quizzes': 'QUIZZES_VIEW',
+    'Certifications': 'CERTIFICATES_VIEW',
+    'Analytics': 'ANALYTICS_VIEW',
+    'Company users': 'COMPANY_USERS_VIEW',
+    'Companies': 'COMPANIES_VIEW',
+    'Plans': 'PLANS_VIEW'
+  };
+
+  const permission = permissionByLabel[label];
+
+  return permission
+    ? this.authService.hasPermission(permission)
+    : false;
+}
 
   getNavRoute(label: string): string {
     if (label === 'Plans') {

@@ -14,6 +14,7 @@ public record UserUpdateRequest(
         @NotBlank String role,
         UUID roleId,
         String companyId,
+        String companyRole,
         String status
 ) {
     public UserUpdateRequest(
@@ -35,6 +36,7 @@ public record UserUpdateRequest(
                 role,
                 null,
                 companyId,
+                null,
                 status
         );
     }

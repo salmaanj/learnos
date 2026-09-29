@@ -172,7 +172,7 @@ export class Courses implements OnInit, OnDestroy {
 
     forkJoin({
       coursesResponse: this.coursesService.getCourses(),
-      learnersResponse: this.learnersService.getLearners()
+      
     })
       .pipe(
         finalize(() => {
@@ -181,16 +181,14 @@ export class Courses implements OnInit, OnDestroy {
         })
       )
       .subscribe({
-        next: ({ coursesResponse, learnersResponse }) => {
+        next: ({ coursesResponse,  }) => {
           const items = this.extractArray(coursesResponse);
 
           this.courses = items.map(course =>
             this.mapCourse(course)
           );
 
-          this.learners = Array.isArray(learnersResponse)
-            ? learnersResponse
-            : this.extractArray(learnersResponse);
+         
 
           this.cd.detectChanges();
         },

@@ -4,7 +4,9 @@ import com.learnos.auth.dto.AuthResponse;
 import com.learnos.auth.dto.LoginRequest;
 import com.learnos.auth.dto.RefreshTokenRequest;
 import com.learnos.auth.dto.RegisterRequest;
+import com.learnos.auth.model.Permission;
 import com.learnos.auth.model.Role;
+import com.learnos.auth.model.RolePermission;
 import com.learnos.auth.model.User;
 import com.learnos.auth.model.UserRole;
 import com.learnos.auth.repository.UserRepository;
@@ -23,6 +25,8 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -150,9 +154,11 @@ public class AuthService {
                 userRoleRepository.findRolesByUserId(user.getId());
 
         return userRoles.stream()
-                .map(userRole ->
-                        userRole.getRole().getName()
-                )
+                .filter(Objects::nonNull)
+                .map(UserRole::getRole)
+                .filter(Objects::nonNull)
+                .map(role -> role.getName())
+                .filter(Objects::nonNull)
                 .findFirst()
                 .orElse(user.getRole().name());
     }
@@ -217,8 +223,6 @@ public class AuthService {
         user.setPassword(passwordEncoder.encode(newPassword.trim()));
         user.setOtpCode(null);
         user.setOtpExpiry(null);
-
-        // Invalidates existing refresh-token sessions after the password reset.
         user.setRefreshToken(null);
         user.setLoginAttempts(0);
 
@@ -290,12 +294,37 @@ public class AuthService {
         return email.trim().toLowerCase(Locale.ROOT);
     }
 
+    private List<String> getPermissions(User user) {
+        return userRoleRepository
+                .findRolesByUserId(user.getId())
+                .stream()
+                .filter(Objects::nonNull)
+                .map(UserRole::getRole)
+                .filter(Objects::nonNull)
+                .flatMap(dynamicRole -> {
+                    if (dynamicRole.getRolePermissions() == null) {
+                        return java.util.stream.Stream.empty();
+                    }
+
+                    return dynamicRole.getRolePermissions().stream();
+                })
+                .filter(Objects::nonNull)
+                .map(RolePermission::getPermission)
+                .filter(Objects::nonNull)
+                .map(Permission::getCode)
+                .filter(Objects::nonNull)
+                .distinct()
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
     private AuthResponse buildAuthResponse(
             User user,
             String accessToken,
             String refreshToken
     ) {
         Company company = user.getCompany();
+        List<String> permissions = getPermissions(user);
 
         AuthResponse.UserInfo info = AuthResponse.UserInfo.builder()
                 .id(user.getId())
@@ -305,6 +334,7 @@ public class AuthService {
                 .fullName(user.getFullName())
                 .phone(user.getPhone())
                 .role(user.getRole())
+                .permissions(permissions)
                 .profileImageUrl(user.getProfileImageUrl())
                 .companyId(
                         company != null

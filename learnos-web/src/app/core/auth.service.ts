@@ -31,6 +31,7 @@ export interface AuthUser {
   fullName?: string;
   phone?: string | null;
   role?: string;
+  permissions?: string[];
   profileImageUrl?: string | null;
   companyId?: string | null;
   companyName?: string | null;
@@ -77,6 +78,9 @@ export class AuthService {
             this.normalizeRole(user.role);
 
           user.role = role;
+          user.permissions = this.normalizePermissions(
+            user.permissions
+          );
 
           localStorage.setItem(
             'accessToken',
@@ -243,11 +247,30 @@ export class AuthService {
 
       return {
         ...user,
-        role: this.normalizeRole(user.role)
+        role: this.normalizeRole(user.role),
+        permissions: this.normalizePermissions(
+          user.permissions
+        )
       };
     } catch {
       return null;
     }
+  }
+
+  hasPermission(permission: string): boolean {
+    const requestedPermission =
+      permission.trim().toUpperCase();
+
+    if (!requestedPermission) {
+      return false;
+    }
+
+    return this.getCurrentUser()?.permissions
+      ?.some(value =>
+        value.trim().toUpperCase()
+          === requestedPermission
+      )
+      ?? false;
   }
 
   isLoggedIn(): boolean {
@@ -358,6 +381,24 @@ export class AuthService {
       .toUpperCase()
       .replace(/^ROLE_/, '')
       .replace(/[\s_-]/g, '');
+  }
+
+  private normalizePermissions(
+    permissions: unknown
+  ): string[] {
+    if (!Array.isArray(permissions)) {
+      return [];
+    }
+
+    return permissions
+      .filter(
+        (permission): permission is string =>
+          typeof permission === 'string'
+      )
+      .map(permission =>
+        permission.trim().toUpperCase()
+      )
+      .filter(Boolean);
   }
 
   private resolveCompanyLogoUrl(

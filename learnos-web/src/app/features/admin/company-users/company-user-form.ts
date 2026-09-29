@@ -7,17 +7,10 @@ import {
   AbstractControl,
   ValidationErrors
 } from '@angular/forms';
-import {
-  ActivatedRoute,
-  Router,
-  RouterModule
-} from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { CompanyUsersService } from './company-users.service';
 import { AuthService } from '../../../core/auth.service';
-import {
-  Role,
-  RoleService
-} from '../roles/role.service';
+import { Role, RoleService } from '../roles/role.service';
 
 function passwordsMatchValidator(
   group: AbstractControl
@@ -37,18 +30,13 @@ function passwordsMatchValidator(
 @Component({
   selector: 'app-company-user-form',
   standalone: true,
-  imports: [
-    CommonModule,
-    ReactiveFormsModule,
-    RouterModule
-  ],
+  imports: [CommonModule, ReactiveFormsModule, RouterModule],
   templateUrl: './company-user-form.html',
   styleUrl: './company-user-form.scss'
 })
 export class CompanyUserForm implements OnInit {
   private readonly fb = inject(FormBuilder);
-  private readonly companyUsersService =
-    inject(CompanyUsersService);
+  private readonly companyUsersService = inject(CompanyUsersService);
   private readonly roleService = inject(RoleService);
   private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
@@ -57,7 +45,6 @@ export class CompanyUserForm implements OnInit {
 
   showPassword = false;
   showConfirmPassword = false;
-
   isLearnerForm = false;
   roles: Role[] = [];
   companies: any[] = [];
@@ -70,13 +57,14 @@ export class CompanyUserForm implements OnInit {
 
   get restrictToLearnerOnly(): boolean {
     const actingUserRole = (
-      this.authService.getCurrentUser()?.role
-      || this.authService.getUserRole()
-      || ''
-    ).trim().toUpperCase();
+      this.authService.getCurrentUser()?.role ||
+      this.authService.getUserRole() ||
+      ''
+    )
+      .trim()
+      .toUpperCase();
 
-    return actingUserRole === 'USER'
-      || this.isLearnerForm;
+    return actingUserRole === 'USER' || this.isLearnerForm;
   }
 
   get canCreateSuperAdmin(): boolean {
@@ -87,25 +75,21 @@ export class CompanyUserForm implements OnInit {
     {
       firstName: ['', Validators.required],
       lastName: ['', Validators.required],
-      email: [
-        '',
-        [Validators.required, Validators.email]
-      ],
+      email: ['', [Validators.required, Validators.email]],
       password: [''],
       confirmPassword: [''],
       phone: [''],
       role: [''],
       roleId: [''],
       companyId: ['', Validators.required],
-      status: ['Active']
+      status: ['ACTIVE']
     },
     { validators: passwordsMatchValidator }
   );
 
   ngOnInit(): void {
     this.isLearnerForm =
-      this.route.snapshot.queryParamMap.get('role')
-        === 'LEARNER';
+      this.route.snapshot.queryParamMap.get('role') === 'LEARNER';
 
     this.loadCompanies();
 
@@ -121,20 +105,21 @@ export class CompanyUserForm implements OnInit {
         role: 'LEARNER',
         roleId: ''
       });
-    } else {
+    }
+
+    if (id || !this.isLearnerForm) {
       this.loadRoles();
     }
 
+    const passwordControl = this.userForm.get('password');
+
     if (id) {
-      this.userForm.get('password')?.clearValidators();
-      this.userForm.get('password')?.updateValueAndValidity();
-      this.loadUser(id);
+      passwordControl?.clearValidators();
     } else {
-      this.userForm.get('password')?.setValidators([
-        Validators.required
-      ]);
-      this.userForm.get('password')?.updateValueAndValidity();
+      passwordControl?.setValidators([Validators.required]);
     }
+
+    passwordControl?.updateValueAndValidity();
   }
 
   loadRoles(): void {
@@ -144,20 +129,18 @@ export class CompanyUserForm implements OnInit {
 
     this.roleService.getRoles().subscribe({
       next: roles => {
-        const isSuperAdmin =
-          this.authService.isSuperAdmin();
+        const isSuperAdmin = this.authService.isSuperAdmin();
 
         this.roles = roles.filter(role => {
-          const roleName = role.name.trim().toUpperCase();
+          const roleName = String(role.name ?? '')
+            .trim()
+            .toUpperCase();
 
           if (roleName === 'LEARNER') {
             return false;
           }
 
-          if (
-            roleName === 'SUPER_ADMIN'
-            && !isSuperAdmin
-          ) {
+          if (roleName === 'SUPER_ADMIN' && !isSuperAdmin) {
             return false;
           }
 
@@ -165,6 +148,11 @@ export class CompanyUserForm implements OnInit {
         });
 
         this.rolesLoading = false;
+
+        if (this.isEdit && this.userId) {
+          this.loadUser(this.userId);
+        }
+
         this.cd.detectChanges();
       },
       error: error => {
@@ -191,7 +179,8 @@ export class CompanyUserForm implements OnInit {
           : data?.content ?? [];
         this.cd.detectChanges();
       })
-      .catch(() => {
+      .catch(error => {
+        console.error('Unable to load companies', error);
         this.companies = [];
         this.cd.detectChanges();
       });
@@ -199,47 +188,50 @@ export class CompanyUserForm implements OnInit {
 
   loadUser(id: string): void {
     this.loading = true;
+    this.error = '';
     this.cd.detectChanges();
 
     this.companyUsersService.getUserById(id).subscribe({
-      next: (user: any) => {
-        const roleName = (
-          user.role || ''
-        ).trim().toUpperCase();
+      next: (result: any) => {
+        const user = result?.data ?? result;
+
+        const fullName = String(user.name ?? '').trim();
+        const nameParts = fullName
+          ? fullName.split(/\s+/)
+          : [];
+
+        const roleName = String(
+          user.role ?? user.companyRole ?? user.roleName ?? ''
+        )
+          .trim()
+          .toUpperCase();
+
+        const matchingRole = this.roles.find(
+          role =>
+            String(role.name ?? '')
+              .trim()
+              .toUpperCase() === roleName
+        );
 
         if (roleName === 'LEARNER') {
           this.isLearnerForm = true;
-          this.userForm.patchValue({
-            role: 'LEARNER',
-            roleId: ''
-          });
-        } else {
-          const matchingRole = this.roles.find(role =>
-            role.name.trim().toUpperCase() === roleName
-          );
-
-          this.userForm.patchValue({
-            role: matchingRole ? '' : roleName,
-            roleId: matchingRole?.id ?? ''
-          });
         }
 
         this.userForm.patchValue({
-          firstName:
-            user.firstName
-            ?? user.name?.split(' ')?.[0]
-            ?? '',
-          lastName:
-            user.lastName
-            ?? user.name?.split(' ')?.slice(1).join(' ')
+          firstName: user.firstName ?? nameParts[0] ?? '',
+          lastName: user.lastName
+            ?? nameParts.slice(1).join(' ')
             ?? '',
           email: user.email ?? '',
           phone: user.phone ?? '',
-          companyId:
-            user.companyId
+          companyId: user.companyId
             ?? user.company?.id
             ?? '',
-          status: user.status ?? 'Active'
+          status: user.status ?? 'ACTIVE',
+          role: roleName === 'LEARNER' ? 'LEARNER' : '',
+          roleId: roleName === 'LEARNER'
+            ? ''
+            : matchingRole?.id ?? user.roleId ?? ''
         });
 
         this.loading = false;
@@ -248,8 +240,7 @@ export class CompanyUserForm implements OnInit {
       error: error => {
         console.error(error);
         this.error =
-          error?.error?.message
-          || 'Failed to load user';
+          error?.error?.message || 'Failed to load user';
         this.loading = false;
         this.cd.detectChanges();
       }
@@ -281,13 +272,17 @@ export class CompanyUserForm implements OnInit {
       email: raw.email!,
       phone: raw.phone || '',
       companyId: raw.companyId || null,
-      status: raw.status || 'Active'
+      status: raw.status || 'ACTIVE'
     };
 
     if (this.isLearnerForm) {
       payload.role = 'LEARNER';
     } else {
+      payload.role = 'USER';
       payload.roleId = raw.roleId;
+      payload.companyRole = this.roles.find(
+        role => role.id === raw.roleId
+      )?.name || '';
     }
 
     if (!this.isEdit || raw.password) {
@@ -295,10 +290,7 @@ export class CompanyUserForm implements OnInit {
     }
 
     const request = this.isEdit
-      ? this.companyUsersService.updateUser(
-          this.userId,
-          payload
-        )
+      ? this.companyUsersService.updateUser(this.userId, payload)
       : this.companyUsersService.createUser(payload);
 
     request.subscribe({
@@ -318,8 +310,7 @@ export class CompanyUserForm implements OnInit {
       error: error => {
         console.error(error);
         this.error =
-          error?.error?.message
-          || 'Failed to save user';
+          error?.error?.message || 'Failed to save user';
         this.loading = false;
         this.cd.detectChanges();
       }
@@ -334,16 +325,15 @@ export class CompanyUserForm implements OnInit {
     );
   }
 
+  cancel(): void {
+    this.navigateAfterSave();
+  }
+
   togglePasswordVisibility(): void {
     this.showPassword = !this.showPassword;
   }
 
   toggleConfirmPasswordVisibility(): void {
-    this.showConfirmPassword =
-      !this.showConfirmPassword;
-  }
-
-  cancel(): void {
-    this.navigateAfterSave();
+    this.showConfirmPassword = !this.showConfirmPassword;
   }
 }
