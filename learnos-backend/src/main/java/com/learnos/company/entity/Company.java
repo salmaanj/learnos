@@ -2,6 +2,8 @@ package com.learnos.company.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -40,10 +42,15 @@ public class Company {
 
     private String industry;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "company_type", nullable = false)
+    private CompanyType companyType = CompanyType.BUSINESS;
+
     @Column(name = "company_code", unique = true, nullable = false)
     private String companyCode;
 
     private String email;
+
     private String phone;
 
     @Column(name = "contact_phone")
@@ -55,6 +62,7 @@ public class Company {
     private String address;
 
     private String city;
+
     private String state;
 
     @Column(name = "pin_code")
@@ -111,16 +119,23 @@ public class Company {
 
         this.updatedAt = now;
 
-        if (this.primaryColor == null || this.primaryColor.isBlank()) {
+        if (this.primaryColor == null
+                || this.primaryColor.isBlank()) {
             this.primaryColor = "#1E3A8A";
         }
 
-        if (this.secondaryColor == null || this.secondaryColor.isBlank()) {
+        if (this.secondaryColor == null
+                || this.secondaryColor.isBlank()) {
             this.secondaryColor = "#F97316";
         }
 
-        if (this.accentColor == null || this.accentColor.isBlank()) {
+        if (this.accentColor == null
+                || this.accentColor.isBlank()) {
             this.accentColor = "#2563EB";
+        }
+
+        if (this.companyType == null) {
+            this.companyType = CompanyType.BUSINESS;
         }
 
         applyPlanLimits();
@@ -133,11 +148,17 @@ public class Company {
     @PreUpdate
     protected void onUpdate() {
         this.updatedAt = LocalDateTime.now();
+
+        if (this.companyType == null) {
+            this.companyType = CompanyType.BUSINESS;
+        }
+
         applyPlanLimits();
     }
 
     private void applyPlanLimits() {
-        if (this.planCode == null || this.planCode.isBlank()) {
+        if (this.planCode == null
+                || this.planCode.isBlank()) {
             if (this.maxLearners == null) {
                 this.maxLearners = 10000;
             }
@@ -173,6 +194,7 @@ public class Company {
                 if (this.maxCourses == null) {
                     this.maxCourses = 1000;
                 }
+
                 break;
         }
     }
@@ -244,6 +266,14 @@ public class Company {
 
     public void setIndustry(String industry) {
         this.industry = industry;
+    }
+
+    public CompanyType getCompanyType() {
+        return companyType;
+    }
+
+    public void setCompanyType(CompanyType companyType) {
+        this.companyType = companyType;
     }
 
     public String getCompanyCode() {

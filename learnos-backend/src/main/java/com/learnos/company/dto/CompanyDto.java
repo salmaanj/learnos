@@ -1,5 +1,7 @@
 package com.learnos.company.dto;
 
+import com.learnos.company.entity.CompanyType;
+
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -15,6 +17,8 @@ public class CompanyDto {
     private String contactPhone;
     private String domain;
     private String status;
+
+    private CompanyType companyType;
 
     private String address;
     private String city;
@@ -138,6 +142,14 @@ public class CompanyDto {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public CompanyType getCompanyType() {
+        return companyType;
+    }
+
+    public void setCompanyType(CompanyType companyType) {
+        this.companyType = companyType;
     }
 
     public String getAddress() {

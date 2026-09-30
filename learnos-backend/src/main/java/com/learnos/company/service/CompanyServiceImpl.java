@@ -5,6 +5,7 @@ import com.learnos.auth.repository.UserRepository;
 import com.learnos.auth.service.AuthorizationService;
 import com.learnos.company.dto.CompanyDto;
 import com.learnos.company.entity.Company;
+import com.learnos.company.entity.CompanyType;
 import com.learnos.company.repository.CompanyRepository;
 import com.learnos.companyuser.repository.CompanyUserRepository;
 import com.learnos.course.repository.CourseRepository;
@@ -61,7 +62,8 @@ public class CompanyServiceImpl implements CompanyService {
                     .toList();
         }
 
-        if (currentUser != null && currentUser.getCompany() != null) {
+        if (currentUser != null
+                && currentUser.getCompany() != null) {
             return companyRepository
                     .findById(currentUser.getCompany().getId())
                     .map(company -> List.of(mapToDto(company)))
@@ -74,8 +76,8 @@ public class CompanyServiceImpl implements CompanyService {
     @Override
     public CompanyDto getCompanyById(String id) {
         User currentUser = getCurrentUser();
-
         Company company = findCompany(id);
+
         ensureCanAccessCompany(currentUser, company);
 
         return mapToDto(company);
@@ -98,7 +100,10 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    public CompanyDto updateCompany(String id, CompanyDto dto) {
+    public CompanyDto updateCompany(
+            String id,
+            CompanyDto dto
+    ) {
         User currentUser = getCurrentUser();
         Company company = findCompany(id);
 
@@ -115,7 +120,10 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     @Override
-    public CompanyDto uploadLogo(String id, MultipartFile file) {
+    public CompanyDto uploadLogo(
+            String id,
+            MultipartFile file
+    ) {
         User currentUser = getCurrentUser();
         Company company = findCompany(id);
 
@@ -123,22 +131,30 @@ public class CompanyServiceImpl implements CompanyService {
         validateLogoFile(file);
 
         try {
-            Path logoDirectory = Paths.get(uploadDir, "company-logos")
-                    .toAbsolutePath()
-                    .normalize();
+            Path logoDirectory = Paths.get(
+                    uploadDir,
+                    "company-logos"
+            ).toAbsolutePath().normalize();
 
             Files.createDirectories(logoDirectory);
 
-            String extension = getFileExtension(file.getOriginalFilename());
+            String extension = getFileExtension(
+                    file.getOriginalFilename()
+            );
+
             String fileName = company.getId()
                     + "-"
                     + System.currentTimeMillis()
                     + extension;
 
-            Path destination = logoDirectory.resolve(fileName).normalize();
+            Path destination = logoDirectory
+                    .resolve(fileName)
+                    .normalize();
 
             if (!destination.startsWith(logoDirectory)) {
-                throw new RuntimeException("Invalid logo file path");
+                throw new RuntimeException(
+                        "Invalid logo file path"
+                );
             }
 
             Files.copy(
@@ -148,7 +164,10 @@ public class CompanyServiceImpl implements CompanyService {
             );
 
             String oldLogoUrl = company.getLogoUrl();
-            company.setLogoUrl("/files/company-logos/" + fileName);
+
+            company.setLogoUrl(
+                    "/files/company-logos/" + fileName
+            );
 
             Company saved = companyRepository.save(company);
 
@@ -156,7 +175,10 @@ public class CompanyServiceImpl implements CompanyService {
 
             return mapToDto(saved);
         } catch (IOException exception) {
-            throw new RuntimeException("Could not save company logo", exception);
+            throw new RuntimeException(
+                    "Could not save company logo",
+                    exception
+            );
         }
     }
 
@@ -168,7 +190,9 @@ public class CompanyServiceImpl implements CompanyService {
             throw new RuntimeException("Access denied");
         }
 
-        companyRepository.deleteById(UUID.fromString(id));
+        companyRepository.deleteById(
+                UUID.fromString(id)
+        );
     }
 
     private void applyCompanyDetails(
@@ -189,24 +213,55 @@ public class CompanyServiceImpl implements CompanyService {
         company.setPinCode(dto.getPinCode());
         company.setCountry(dto.getCountry());
 
-        company.setGstNumber(normalizeUpperCase(dto.getGstNumber()));
-        company.setPanNumber(normalizeUpperCase(dto.getPanNumber()));
-        company.setCinNumber(normalizeUpperCase(dto.getCinNumber()));
+        company.setGstNumber(
+                normalizeUpperCase(dto.getGstNumber())
+        );
+
+        company.setPanNumber(
+                normalizeUpperCase(dto.getPanNumber())
+        );
+
+        company.setCinNumber(
+                normalizeUpperCase(dto.getCinNumber())
+        );
 
         company.setPrimaryColor(dto.getPrimaryColor());
         company.setSecondaryColor(dto.getSecondaryColor());
         company.setAccentColor(dto.getAccentColor());
 
+        if (dto.getCompanyType() != null) {
+            company.setCompanyType(
+                    dto.getCompanyType()
+            );
+        } else if (company.getCompanyType() == null) {
+            company.setCompanyType(
+                    CompanyType.BUSINESS
+            );
+        }
+
         if (canChangeAdministrativeFields) {
-            company.setCompanyCode(dto.getCompanyCode());
+            company.setCompanyCode(
+                    dto.getCompanyCode()
+            );
+
             company.setStatus(dto.getStatus());
 
-            company.setPlanCode(normalizeUpperCase(dto.getPlanCode()));
-            company.setPlanStartDate(dto.getPlanStartDate());
-            company.setPlanExpiryDate(dto.getPlanExpiryDate());
+            company.setPlanCode(
+                    normalizeUpperCase(dto.getPlanCode())
+            );
+
+            company.setPlanStartDate(
+                    dto.getPlanStartDate()
+            );
+
+            company.setPlanExpiryDate(
+                    dto.getPlanExpiryDate()
+            );
 
             if (dto.getCanCreateCourses() != null) {
-                company.setCanCreateCourses(dto.getCanCreateCourses());
+                company.setCanCreateCourses(
+                        dto.getCanCreateCourses()
+                );
             }
         }
     }
@@ -223,7 +278,15 @@ public class CompanyServiceImpl implements CompanyService {
                 company.getStatus()
         );
 
-        dto.setContactPhone(company.getContactPhone());
+        dto.setCompanyType(
+                company.getCompanyType() != null
+                        ? company.getCompanyType()
+                        : CompanyType.BUSINESS
+        );
+
+        dto.setContactPhone(
+                company.getContactPhone()
+        );
 
         dto.setAddress(company.getAddress());
         dto.setCity(company.getCity());
@@ -247,7 +310,9 @@ public class CompanyServiceImpl implements CompanyService {
 
         dto.setMaxLearners(company.getMaxLearners());
         dto.setMaxCourses(company.getMaxCourses());
-        dto.setCanCreateCourses(company.getCanCreateCourses());
+        dto.setCanCreateCourses(
+                company.getCanCreateCourses()
+        );
 
         long learnerCount = companyUserRepository
                 .findByCompany_Id(company.getId())
@@ -261,8 +326,11 @@ public class CompanyServiceImpl implements CompanyService {
                 .count();
 
         dto.setLearnerCount(learnerCount);
+
         dto.setCourseCount(
-                courseRepository.countByCompanyId(company.getId())
+                courseRepository.countByCompanyId(
+                        company.getId()
+                )
         );
 
         BigDecimal courseRevenue =
@@ -284,8 +352,13 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private Company findCompany(String id) {
-        return companyRepository.findById(UUID.fromString(id))
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyRepository
+                .findById(UUID.fromString(id))
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Company not found"
+                        )
+                );
     }
 
     private void ensureCanAccessCompany(
@@ -309,7 +382,9 @@ public class CompanyServiceImpl implements CompanyService {
 
     private void validateLogoFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new RuntimeException("Please select a logo file");
+            throw new RuntimeException(
+                    "Please select a logo file"
+            );
         }
 
         if (file.getSize() > MAX_LOGO_SIZE_BYTES) {
@@ -322,7 +397,9 @@ public class CompanyServiceImpl implements CompanyService {
 
         if (
                 contentType == null
-                        || !ALLOWED_LOGO_TYPES.contains(contentType)
+                        || !ALLOWED_LOGO_TYPES.contains(
+                        contentType
+                )
         ) {
             throw new RuntimeException(
                     "Only PNG, JPG, WebP, and SVG logo files are allowed"
@@ -330,7 +407,9 @@ public class CompanyServiceImpl implements CompanyService {
         }
     }
 
-    private String getFileExtension(String originalFileName) {
+    private String getFileExtension(
+            String originalFileName
+    ) {
         if (
                 originalFileName == null
                         || !originalFileName.contains(".")
@@ -339,7 +418,9 @@ public class CompanyServiceImpl implements CompanyService {
         }
 
         String extension = originalFileName
-                .substring(originalFileName.lastIndexOf('.'))
+                .substring(
+                        originalFileName.lastIndexOf('.')
+                )
                 .toLowerCase();
 
         if (
@@ -378,7 +459,7 @@ public class CompanyServiceImpl implements CompanyService {
 
             Files.deleteIfExists(oldLogoPath);
         } catch (IOException ignored) {
-            // The replacement logo was saved successfully.
+            // Replacement logo was saved successfully.
         }
     }
 
@@ -391,9 +472,10 @@ public class CompanyServiceImpl implements CompanyService {
     }
 
     private User getCurrentUser() {
-        Authentication auth = SecurityContextHolder
-                .getContext()
-                .getAuthentication();
+        Authentication auth =
+                SecurityContextHolder
+                        .getContext()
+                        .getAuthentication();
 
         if (auth == null || auth.getName() == null) {
             return null;

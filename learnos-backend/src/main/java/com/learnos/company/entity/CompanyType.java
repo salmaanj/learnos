@@ -1,4 +1,10 @@
 package com.learnos.company.entity;
 
-public class CompanyType {
+public enum CompanyType {
+
+    BUSINESS,
+
+    UNIVERSITY_COLLEGE,
+
+    GOVERNMENT
 }

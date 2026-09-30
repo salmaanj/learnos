@@ -34,9 +34,10 @@
   >
     <div class="form-grid">
       <div class="field">
-        <label>Name</label>
+        <label for="name">Name</label>
 
         <input
+          id="name"
           class="input"
           placeholder="Enter company name"
           formControlName="name"
@@ -44,9 +45,50 @@
       </div>
 
       <div class="field">
-        <label>Industry</label>
+        <label for="companyType">
+          Organization Type
+        </label>
+
+        <select
+          id="companyType"
+          class="input"
+          formControlName="companyType"
+        >
+          <option value="">
+            Select organization type
+          </option>
+
+          <option
+            *ngFor="let type of companyTypes"
+            [value]="type.value"
+          >
+            {{ type.label }}
+          </option>
+        </select>
+
+        <small
+          class="field-error"
+          *ngIf="
+            companyForm.get('companyType')?.touched &&
+            companyForm.get('companyType')?.hasError('required')
+          "
+        >
+          Please select an organization type.
+        </small>
+
+        <small
+          *ngIf="isCompanyAdminEdit"
+          class="readonly-note"
+        >
+          Managed by Super Admin.
+        </small>
+      </div>
+
+      <div class="field">
+        <label for="industry">Industry</label>
 
         <input
+          id="industry"
           class="input"
           placeholder="Example: IT Services, Healthcare, Education"
           formControlName="industry"
@@ -54,9 +96,12 @@
       </div>
 
       <div class="field">
-        <label>Company Code</label>
+        <label for="companyCode">
+          Company Code
+        </label>
 
         <input
+          id="companyCode"
           class="input"
           placeholder="Example: BLUTE001"
           formControlName="companyCode"
@@ -71,9 +116,10 @@
       </div>
 
       <div class="field">
-        <label>Email</label>
+        <label for="email">Email</label>
 
         <input
+          id="email"
           class="input"
           type="email"
           placeholder="Enter company email"
@@ -82,9 +128,10 @@
       </div>
 
       <div class="field">
-        <label>Phone</label>
+        <label for="phone">Phone</label>
 
         <input
+          id="phone"
           class="input"
           placeholder="Enter contact number"
           formControlName="phone"
@@ -92,9 +139,10 @@
       </div>
 
       <div class="field">
-        <label>Domain</label>
+        <label for="domain">Domain</label>
 
         <input
+          id="domain"
           class="input"
           placeholder="Example: company.com"
           formControlName="domain"
@@ -102,9 +150,10 @@
       </div>
 
       <div class="field field-wide">
-        <label>Address</label>
+        <label for="address">Address</label>
 
         <textarea
+          id="address"
           class="input address-input"
           rows="2"
           placeholder="Enter registered office address"
@@ -113,9 +162,10 @@
       </div>
 
       <div class="field">
-        <label>City</label>
+        <label for="city">City</label>
 
         <input
+          id="city"
           class="input"
           placeholder="Enter city"
           formControlName="city"
@@ -123,9 +173,10 @@
       </div>
 
       <div class="field">
-        <label>State</label>
+        <label for="state">State</label>
 
         <input
+          id="state"
           class="input"
           placeholder="Enter state"
           formControlName="state"
@@ -133,9 +184,10 @@
       </div>
 
       <div class="field">
-        <label>PIN Code</label>
+        <label for="pinCode">PIN Code</label>
 
         <input
+          id="pinCode"
           class="input"
           placeholder="Enter PIN code"
           formControlName="pinCode"
@@ -143,9 +195,10 @@
       </div>
 
       <div class="field">
-        <label>Country</label>
+        <label for="country">Country</label>
 
         <input
+          id="country"
           class="input"
           placeholder="Enter country"
           formControlName="country"
@@ -153,9 +206,10 @@
       </div>
 
       <div class="field">
-        <label>GST No.</label>
+        <label for="gstNumber">GST No.</label>
 
         <input
+          id="gstNumber"
           class="input"
           maxlength="15"
           placeholder="Example: 27ABCDE1234F1Z5"
@@ -175,9 +229,10 @@
       </div>
 
       <div class="field">
-        <label>PAN No.</label>
+        <label for="panNumber">PAN No.</label>
 
         <input
+          id="panNumber"
           class="input"
           maxlength="10"
           placeholder="Example: ABCDE1234F"
@@ -197,9 +252,10 @@
       </div>
 
       <div class="field">
-        <label>Plan</label>
+        <label for="planCode">Plan</label>
 
         <select
+          id="planCode"
           class="input"
           formControlName="planCode"
         >
@@ -232,9 +288,12 @@
       </div>
 
       <div class="field">
-        <label>Plan Start Date</label>
+        <label for="planStartDate">
+          Plan Start Date
+        </label>
 
         <input
+          id="planStartDate"
           class="input"
           type="date"
           formControlName="planStartDate"
@@ -249,9 +308,12 @@
       </div>
 
       <div class="field">
-        <label>Plan Expiry Date</label>
+        <label for="planExpiryDate">
+          Plan Expiry Date
+        </label>
 
         <input
+          id="planExpiryDate"
           class="input"
           type="date"
           formControlName="planExpiryDate"
@@ -266,9 +328,10 @@
       </div>
 
       <div class="field">
-        <label>Status</label>
+        <label for="status">Status</label>
 
         <select
+          id="status"
           class="input"
           formControlName="status"
         >
@@ -337,7 +400,9 @@
       </div>
 
       <div class="field">
-        <label>Primary Colour</label>
+        <label for="primaryColor">
+          Primary Colour
+        </label>
 
         <div class="color-input-row">
           <input
@@ -347,6 +412,7 @@
           />
 
           <input
+            id="primaryColor"
             class="input color-code"
             placeholder="#1E3A8A"
             formControlName="primaryColor"
@@ -355,7 +421,9 @@
       </div>
 
       <div class="field">
-        <label>Secondary Colour</label>
+        <label for="secondaryColor">
+          Secondary Colour
+        </label>
 
         <div class="color-input-row">
           <input
@@ -365,6 +433,7 @@
           />
 
           <input
+            id="secondaryColor"
             class="input color-code"
             placeholder="#F97316"
             formControlName="secondaryColor"
@@ -373,7 +442,9 @@
       </div>
 
       <div class="field">
-        <label>Accent Colour</label>
+        <label for="accentColor">
+          Accent Colour
+        </label>
 
         <div class="color-input-row">
           <input
@@ -383,6 +454,7 @@
           />
 
           <input
+            id="accentColor"
             class="input color-code"
             placeholder="#2563EB"
             formControlName="accentColor"

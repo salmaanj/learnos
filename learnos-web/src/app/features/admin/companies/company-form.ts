@@ -24,7 +24,8 @@ import {
 import {
   CompaniesService,
   CompanyPayload,
-  CompanyPlanCode
+  CompanyPlanCode,
+  CompanyType
 } from '../services/companies.service';
 import {
   Plan,
@@ -61,6 +62,24 @@ export class CompanyForm
   logoPreview = '';
   selectedLogoFile: File | null = null;
 
+  readonly companyTypes: {
+    value: CompanyType;
+    label: string;
+  }[] = [
+    {
+      value: 'BUSINESS',
+      label: 'Business'
+    },
+    {
+      value: 'UNIVERSITY_COLLEGE',
+      label: 'University / College'
+    },
+    {
+      value: 'GOVERNMENT',
+      label: 'Government'
+    }
+  ];
+
   private objectUrl = '';
 
   constructor(
@@ -82,20 +101,48 @@ export class CompanyForm
 
   ngOnInit(): void {
     this.companyForm = this.fb.group({
-      name: ['', Validators.required],
-      industry: ['', Validators.required],
-      companyCode: ['', Validators.required],
+      name: [
+        '',
+        Validators.required
+      ],
+
+      companyType: [
+        '',
+        Validators.required
+      ],
+
+      industry: [
+        '',
+        Validators.required
+      ],
+
+      companyCode: [
+        '',
+        Validators.required
+      ],
+
       email: [
         '',
-        [Validators.required, Validators.email]
+        [
+          Validators.required,
+          Validators.email
+        ]
       ],
+
       phone: [''],
+
       domain: [''],
+
       address: [''],
+
       city: [''],
+
       state: [''],
+
       pinCode: [''],
+
       country: ['India'],
+
       gstNumber: [
         '',
         [
@@ -104,20 +151,36 @@ export class CompanyForm
           )
         ]
       ],
+
       panNumber: [
         '',
-        [Validators.pattern(/^[A-Z]{5}[0-9]{4}[A-Z]$/)]
+        [
+          Validators.pattern(
+            /^[A-Z]{5}[0-9]{4}[A-Z]$/
+          )
+        ]
       ],
+
       planCode: [''],
+
       planStartDate: [''],
+
       planExpiryDate: [''],
+
       primaryColor: ['#1E3A8A'],
+
       secondaryColor: ['#F97316'],
+
       accentColor: ['#2563EB'],
-      status: ['PENDING_PAYMENT', Validators.required]
+
+      status: [
+        'PENDING_PAYMENT',
+        Validators.required
+      ]
     });
 
-    const id = this.route.snapshot.paramMap.get('id');
+    const id =
+      this.route.snapshot.paramMap.get('id');
 
     this.isEdit = !!id;
     this.companyId = id ?? '';
@@ -143,16 +206,23 @@ export class CompanyForm
       plans: this.plansService.getActivePlans()
     }).subscribe({
       next: ({ company, plans }) => {
-        this.plans = Array.isArray(plans) ? plans : [];
+        this.plans =
+          Array.isArray(plans) ? plans : [];
+
         this.plansLoading = false;
 
-        this.logoPreview = this.resolveLogoUrl(company.logoUrl);
+        this.logoPreview =
+          this.resolveLogoUrl(company.logoUrl);
 
-        const savedPlanCode = String(company.planCode ?? '')
-          .trim()
-          .toUpperCase();
+        const savedPlanCode =
+          String(company.planCode ?? '')
+            .trim()
+            .toUpperCase();
 
-        this.patchCompanyForm(company, savedPlanCode);
+        this.patchCompanyForm(
+          company,
+          savedPlanCode
+        );
 
         if (this.isCompanyAdminEdit) {
           this.disableCompanyAdminFields();
@@ -161,23 +231,30 @@ export class CompanyForm
         const savedPlanIsActive =
           !savedPlanCode
           || this.plans.some(
-            plan => String(plan.code)
-              .trim()
-              .toUpperCase() === savedPlanCode
+            plan =>
+              String(plan.code)
+                .trim()
+                .toUpperCase() === savedPlanCode
           );
 
-        if (savedPlanCode && !savedPlanIsActive) {
+        if (
+          savedPlanCode
+          && !savedPlanIsActive
+        ) {
           this.plansError =
             'The company has a plan that is no longer active. Please select a new active plan before saving.';
         }
       },
+
       error: err => {
         this.plansLoading = false;
         this.plans = [];
+
         this.saveError =
           err?.error?.message
           || err?.error?.error
           || 'Could not load company and plan details.';
+
         console.error(
           'Failed to load company and plans',
           err
@@ -192,7 +269,9 @@ export class CompanyForm
 
     this.plansService.getActivePlans().subscribe({
       next: plans => {
-        this.plans = Array.isArray(plans) ? plans : [];
+        this.plans =
+          Array.isArray(plans) ? plans : [];
+
         this.plansLoading = false;
 
         if (this.plans.length === 0) {
@@ -200,14 +279,20 @@ export class CompanyForm
             'No active plans are available. Companies can still be created as Pending Payment.';
         }
       },
+
       error: err => {
         this.plansLoading = false;
         this.plans = [];
+
         this.plansError =
           err?.error?.message
           || err?.error?.error
           || 'Could not load active plans.';
-        console.error('Failed to load active plans', err);
+
+        console.error(
+          'Failed to load active plans',
+          err
+        );
       }
     });
   }
@@ -218,47 +303,104 @@ export class CompanyForm
   ): void {
     this.companyForm.patchValue({
       name: company.name ?? '',
+
+      companyType:
+        company.companyType
+        ?? 'BUSINESS',
+
       industry: company.industry ?? '',
-      companyCode: company.companyCode ?? '',
+
+      companyCode:
+        company.companyCode ?? '',
+
       email: company.email ?? '',
+
       phone: company.phone ?? '',
+
       domain: company.domain ?? '',
+
       address: company.address ?? '',
+
       city: company.city ?? '',
+
       state: company.state ?? '',
+
       pinCode: company.pinCode ?? '',
+
       country: company.country ?? 'India',
+
       gstNumber: company.gstNumber ?? '',
+
       panNumber: company.panNumber ?? '',
+
       planCode: savedPlanCode,
-      planStartDate: this.toDateInputValue(
-        company.planStartDate
-      ),
-      planExpiryDate: this.toDateInputValue(
-        company.planExpiryDate
-      ),
-      primaryColor: company.primaryColor ?? '#1E3A8A',
-      secondaryColor: company.secondaryColor ?? '#F97316',
-      accentColor: company.accentColor ?? '#2563EB',
-      status: this.normalizeStatus(company.status)
+
+      planStartDate:
+        this.toDateInputValue(
+          company.planStartDate
+        ),
+
+      planExpiryDate:
+        this.toDateInputValue(
+          company.planExpiryDate
+        ),
+
+      primaryColor:
+        company.primaryColor ?? '#1E3A8A',
+
+      secondaryColor:
+        company.secondaryColor ?? '#F97316',
+
+      accentColor:
+        company.accentColor ?? '#2563EB',
+
+      status:
+        this.normalizeStatus(company.status)
     });
   }
 
   private disableCompanyAdminFields(): void {
-    this.companyForm.get('companyCode')
-      ?.disable({ emitEvent: false });
-    this.companyForm.get('planCode')
-      ?.disable({ emitEvent: false });
-    this.companyForm.get('planStartDate')
-      ?.disable({ emitEvent: false });
-    this.companyForm.get('planExpiryDate')
-      ?.disable({ emitEvent: false });
-    this.companyForm.get('status')
-      ?.disable({ emitEvent: false });
+    this.companyForm
+      .get('companyCode')
+      ?.disable({
+        emitEvent: false
+      });
+
+    this.companyForm
+      .get('companyType')
+      ?.disable({
+        emitEvent: false
+      });
+
+    this.companyForm
+      .get('planCode')
+      ?.disable({
+        emitEvent: false
+      });
+
+    this.companyForm
+      .get('planStartDate')
+      ?.disable({
+        emitEvent: false
+      });
+
+    this.companyForm
+      .get('planExpiryDate')
+      ?.disable({
+        emitEvent: false
+      });
+
+    this.companyForm
+      .get('status')
+      ?.disable({
+        emitEvent: false
+      });
   }
 
   onLogoSelected(event: Event): void {
-    const input = event.target as HTMLInputElement;
+    const input =
+      event.target as HTMLInputElement;
+
     const file = input.files?.[0];
 
     if (!file) {
@@ -275,21 +417,29 @@ export class CompanyForm
     if (!allowedTypes.includes(file.type)) {
       this.saveError =
         'Please choose a PNG, JPG, WebP, or SVG logo.';
+
       input.value = '';
+
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
       this.saveError =
         'Logo file size must be 5 MB or less.';
+
       input.value = '';
+
       return;
     }
 
     this.saveError = '';
     this.selectedLogoFile = file;
+
     this.revokeObjectUrl();
-    this.objectUrl = URL.createObjectURL(file);
+
+    this.objectUrl =
+      URL.createObjectURL(file);
+
     this.logoPreview = this.objectUrl;
   }
 
@@ -297,13 +447,19 @@ export class CompanyForm
     controlName: 'gstNumber' | 'panNumber'
   ): void {
     const value = String(
-      this.companyForm.get(controlName)?.value ?? ''
+      this.companyForm
+        .get(controlName)
+        ?.value ?? ''
     ).toUpperCase();
 
-    this.companyForm.get(controlName)?.setValue(
-      value,
-      { emitEvent: false }
-    );
+    this.companyForm
+      .get(controlName)
+      ?.setValue(
+        value,
+        {
+          emitEvent: false
+        }
+      );
   }
 
   save(): void {
@@ -311,101 +467,141 @@ export class CompanyForm
 
     if (this.companyForm.invalid) {
       this.companyForm.markAllAsTouched();
+
       return;
     }
 
     if (this.plansLoading) {
       this.saveError =
         'Please wait while plan details are loading.';
+
       return;
     }
 
-    const formValue = this.companyForm.getRawValue();
-    const status = this.normalizeStatus(formValue.status);
-    const selectedPlanCode = this.toCompanyPlanCode(
-      formValue.planCode
-    );
+    const formValue =
+      this.companyForm.getRawValue();
 
-    const isNewPendingCompany =
-      !this.isEdit && status === 'PENDING_PAYMENT';
+    const status =
+      this.normalizeStatus(formValue.status);
 
-    if (!selectedPlanCode && !isNewPendingCompany) {
+    const selectedPlanCode =
+      this.toCompanyPlanCode(
+        formValue.planCode
+      );
+
+        const allowsEmptyPlan =
+      status === 'PENDING_PAYMENT';
+
+    if (
+      !selectedPlanCode
+      && !allowsEmptyPlan
+    ) {
       this.saveError =
-        'Please select a plan unless the new company is Pending Payment.';
-      this.companyForm.get('planCode')?.markAsTouched();
+        'Please select a plan unless the company is Pending Payment.';
+
+      this.companyForm
+        .get('planCode')
+        ?.markAsTouched();
+
       return;
     }
 
-    if (status === 'ACTIVE' && !selectedPlanCode) {
+    if (
+      status === 'ACTIVE'
+      && !selectedPlanCode
+    ) {
       this.saveError =
         'An Active company must have a plan selected.';
-      this.companyForm.get('planCode')?.markAsTouched();
+
+      this.companyForm
+        .get('planCode')
+        ?.markAsTouched();
+
       return;
     }
 
     this.isSaving = true;
 
-    const payload = this.getPayload(
-      selectedPlanCode,
-      status
-    );
+    const payload =
+      this.getPayload(
+        selectedPlanCode,
+        status
+      );
 
     const saveRequest = this.isEdit
-      ? this.service.updateCompany(this.companyId, payload)
+      ? this.service.updateCompany(
+          this.companyId,
+          payload
+        )
       : this.service.createCompany(payload);
 
-    saveRequest.pipe(
-      switchMap(company => {
-        this.companyId = company.id;
+    saveRequest
+      .pipe(
+        switchMap(company => {
+          this.companyId = company.id;
 
-        return this.selectedLogoFile
-          ? this.service.uploadCompanyLogo(
-              company.id,
-              this.selectedLogoFile
-            )
-          : of(company);
-      }),
-      finalize(() => {
-        this.isSaving = false;
-      })
-    ).subscribe({
-      next: company => {
-        if (company.logoUrl) {
-          this.logoPreview = this.resolveLogoUrl(
-            company.logoUrl
+          return this.selectedLogoFile
+            ? this.service.uploadCompanyLogo(
+                company.id,
+                this.selectedLogoFile
+              )
+            : of(company);
+        }),
+
+        finalize(() => {
+          this.isSaving = false;
+        })
+      )
+      .subscribe({
+        next: company => {
+          if (company.logoUrl) {
+            this.logoPreview =
+              this.resolveLogoUrl(
+                company.logoUrl
+              );
+          }
+
+          this.selectedLogoFile = null;
+
+          this.router.navigate([
+            '/admin/companies'
+          ]);
+        },
+
+        error: err => {
+          this.saveError =
+            err?.error?.message
+            || err?.error?.error
+            || 'Company save or logo upload failed.';
+
+          console.error(
+            'Company save or logo upload failed',
+            err
           );
         }
-
-        this.selectedLogoFile = null;
-        this.router.navigate(['/admin/companies']);
-      },
-      error: err => {
-        this.saveError =
-          err?.error?.message
-          || err?.error?.error
-          || 'Company save or logo upload failed.';
-        console.error(
-          'Company save or logo upload failed',
-          err
-        );
-      }
-    });
+      });
   }
 
   cancel(): void {
-    this.router.navigate(['/admin/companies']);
+    this.router.navigate([
+      '/admin/companies'
+    ]);
   }
 
   formatPlanLabel(plan: Plan): string {
-    const price = plan.price == null
-      ? ''
-      : ` — ${plan.currency || 'INR'} ${plan.price}`;
+    const price =
+      plan.price == null
+        ? ''
+        : ` — ${plan.currency || 'INR'} ${plan.price}`;
 
-    const duration = plan.durationMonths
-      ? ` / ${plan.durationMonths} month${
-          plan.durationMonths === 1 ? '' : 's'
-        }`
-      : '';
+    const duration =
+      plan.durationMonths
+        ? ` / ${plan.durationMonths} month${
+            plan.durationMonths === 1
+              ? ''
+              : 's'
+          }`
+        : '';
 
     return `${plan.name}${price}${duration}`;
   }
@@ -414,28 +610,57 @@ export class CompanyForm
     planCode: CompanyPlanCode,
     status: string
   ): CompanyPayload {
-    const formValue = this.companyForm.getRawValue();
+    const formValue =
+      this.companyForm.getRawValue();
 
     return {
       name: formValue.name,
+
+      companyType:
+        formValue.companyType as CompanyType,
+
       industry: formValue.industry,
-      companyCode: formValue.companyCode,
+
+      companyCode:
+        formValue.companyCode,
+
       email: formValue.email,
+
       phone: formValue.phone,
+
       domain: formValue.domain,
+
       address: formValue.address,
+
       city: formValue.city,
+
       state: formValue.state,
+
       pinCode: formValue.pinCode,
+
       country: formValue.country,
+
       gstNumber: formValue.gstNumber,
+
       panNumber: formValue.panNumber,
+
       planCode: planCode || '',
-      planStartDate: formValue.planStartDate || null,
-      planExpiryDate: formValue.planExpiryDate || null,
-      primaryColor: formValue.primaryColor,
-      secondaryColor: formValue.secondaryColor,
-      accentColor: formValue.accentColor,
+
+      planStartDate:
+        formValue.planStartDate || null,
+
+      planExpiryDate:
+        formValue.planExpiryDate || null,
+
+      primaryColor:
+        formValue.primaryColor,
+
+      secondaryColor:
+        formValue.secondaryColor,
+
+      accentColor:
+        formValue.accentColor,
+
       status
     };
   }
@@ -443,9 +668,10 @@ export class CompanyForm
   private toCompanyPlanCode(
     value: unknown
   ): CompanyPlanCode {
-    const code = String(value ?? '')
-      .trim()
-      .toUpperCase();
+    const code =
+      String(value ?? '')
+        .trim()
+        .toUpperCase();
 
     if (
       code === 'BASIC'
@@ -458,11 +684,14 @@ export class CompanyForm
     return '';
   }
 
-  private normalizeStatus(value: unknown): string {
-    const status = String(value ?? '')
-      .trim()
-      .toUpperCase()
-      .replace(/[\s-]+/g, '_');
+  private normalizeStatus(
+    value: unknown
+  ): string {
+    const status =
+      String(value ?? '')
+        .trim()
+        .toUpperCase()
+        .replace(/[\s-]+/g, '_');
 
     if (
       status === 'PENDING'
@@ -486,12 +715,15 @@ export class CompanyForm
     return 'PENDING_PAYMENT';
   }
 
-  private toDateInputValue(value: unknown): string {
+  private toDateInputValue(
+    value: unknown
+  ): string {
     if (!value) {
       return '';
     }
 
     const text = String(value);
+
     return text.length >= 10
       ? text.substring(0, 10)
       : text;

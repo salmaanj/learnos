@@ -11,6 +11,11 @@ export type CompanyPlanCode =
   | 'ENTERPRISE'
   | string;
 
+export type CompanyType =
+  | 'BUSINESS'
+  | 'UNIVERSITY_COLLEGE'
+  | 'GOVERNMENT';
+
 export interface CompanyPayload {
   name: string;
   industry?: string;
@@ -32,9 +37,10 @@ export interface CompanyPayload {
   primaryColor?: string;
   secondaryColor?: string;
   accentColor?: string;
+  companyType?: CompanyType;
   planCode?: CompanyPlanCode;
-  planStartDate?: string;
-  planExpiryDate?: string;
+  planStartDate?: string | null;
+  planExpiryDate?: string | null;
   maxLearners?: number;
   maxCourses?: number;
   canCreateCourses?: boolean;
@@ -59,12 +65,16 @@ export interface Company extends CompanyPayload {
   providedIn: 'root'
 })
 export class CompaniesService {
-  private readonly baseUrl = 'http://localhost:8080/api/v1';
+  private readonly baseUrl =
+    'http://localhost:8080/api/v1';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient
+  ) {}
 
   private headers(): HttpHeaders {
-    const token = localStorage.getItem('accessToken') || '';
+    const token =
+      localStorage.getItem('accessToken') || '';
 
     return new HttpHeaders({
       Authorization: `Bearer ${token}`
@@ -74,14 +84,18 @@ export class CompaniesService {
   getCompanies(): Observable<Company[]> {
     return this.http.get<Company[]>(
       `${this.baseUrl}/companies`,
-      { headers: this.headers() }
+      {
+        headers: this.headers()
+      }
     );
   }
 
   getCompanyById(id: string): Observable<Company> {
     return this.http.get<Company>(
       `${this.baseUrl}/companies/${id}`,
-      { headers: this.headers() }
+      {
+        headers: this.headers()
+      }
     );
   }
 
@@ -89,11 +103,15 @@ export class CompaniesService {
     return this.getCompanyById(id);
   }
 
-  createCompany(payload: CompanyPayload): Observable<Company> {
+  createCompany(
+    payload: CompanyPayload
+  ): Observable<Company> {
     return this.http.post<Company>(
       `${this.baseUrl}/companies`,
       payload,
-      { headers: this.headers() }
+      {
+        headers: this.headers()
+      }
     );
   }
 
@@ -104,14 +122,18 @@ export class CompaniesService {
     return this.http.put<Company>(
       `${this.baseUrl}/companies/${id}`,
       payload,
-      { headers: this.headers() }
+      {
+        headers: this.headers()
+      }
     );
   }
 
   deleteCompany(id: string): Observable<void> {
     return this.http.delete<void>(
       `${this.baseUrl}/companies/${id}`,
-      { headers: this.headers() }
+      {
+        headers: this.headers()
+      }
     );
   }
 
@@ -120,12 +142,15 @@ export class CompaniesService {
     file: File
   ): Observable<Company> {
     const formData = new FormData();
+
     formData.append('file', file);
 
     return this.http.post<Company>(
       `${this.baseUrl}/companies/${id}/logo`,
       formData,
-      { headers: this.headers() }
+      {
+        headers: this.headers()
+      }
     );
   }
 
@@ -136,7 +161,9 @@ export class CompaniesService {
     return this.uploadCompanyLogo(id, file);
   }
 
-  getLogoUrl(logoUrl?: string | null): string {
+  getLogoUrl(
+    logoUrl?: string | null
+  ): string {
     if (!logoUrl) {
       return '';
     }
