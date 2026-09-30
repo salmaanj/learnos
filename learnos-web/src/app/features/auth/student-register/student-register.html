@@ -1,0 +1,113 @@
+<div class="register-page">
+  <header class="register-header">
+    <a class="brand" routerLink="/preview-home" aria-label="LearnOS home">
+      <img class="brand-image" src="learnos-icon.jpg" alt="LearnOS logo" />
+      <span class="brand-name">Learn<span>OS</span></span>
+    </a>
+
+    <a class="back-link" routerLink="/preview-home">← Back to LearnOS</a>
+  </header>
+
+  <main class="register-main">
+    <section class="register-intro">
+      <span class="eyebrow">For Students</span>
+      <h1>Start learning with LearnOS.</h1>
+      <p>Create your learner account using the company code shared by your organization.</p>
+
+      <div class="benefits">
+        <div class="benefit"><span class="benefit-icon">✓</span><div><strong>Learn at your pace</strong><span>Access practical courses from anywhere.</span></div></div>
+        <div class="benefit"><span class="benefit-icon">✓</span><div><strong>Track your progress</strong><span>Keep your learning journey organized.</span></div></div>
+        <div class="benefit"><span class="benefit-icon">✓</span><div><strong>Earn certificates</strong><span>Showcase the skills you build.</span></div></div>
+      </div>
+    </section>
+
+    <section class="register-card">
+      <div class="card-heading">
+        <span class="eyebrow">Create your account</span>
+        <h2>Student registration</h2>
+        <p>Already have an account? <a routerLink="/login" [queryParams]="{ audience: 'students' }">Sign in</a></p>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-error" role="alert">
+        <span>{{ errorMessage }}</span>
+        <button
+          *ngIf="errorMessage.includes('Please log in')"
+          type="button"
+          class="alert-action"
+          (click)="goToLogin()"
+        >
+          Log in
+        </button>
+      </div>
+
+      <div *ngIf="successMessage" class="alert alert-success" role="status">
+        <div class="alert-success-content">
+          <span>{{ successMessage }}</span>
+          <span class="redirect-note">Redirecting you to sign in...</span>
+        </div>
+      </div>
+
+      <form *ngIf="!successMessage" #registrationForm="ngForm" (ngSubmit)="register()" novalidate>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>First name</span>
+            <input name="firstName" type="text" [(ngModel)]="form.firstName" required autocomplete="given-name" placeholder="Enter your first name" />
+            <small *ngIf="submitted && !form.firstName.trim()" class="field-error">First name is required.</small>
+          </label>
+
+          <label class="form-field">
+            <span>Last name</span>
+            <input name="lastName" type="text" [(ngModel)]="form.lastName" required autocomplete="family-name" placeholder="Enter your last name" />
+            <small *ngIf="submitted && !form.lastName.trim()" class="field-error">Last name is required.</small>
+          </label>
+        </div>
+
+        <label class="form-field">
+          <span>Email address</span>
+          <input name="email" type="email" [(ngModel)]="form.email" required email autocomplete="email" placeholder="you@example.com" />
+          <small *ngIf="submitted && !form.email.trim()" class="field-error">Email address is required.</small>
+          <small *ngIf="submitted && form.email.trim() && !isValidEmailForTemplate()" class="field-error">Enter a valid email address.</small>
+        </label>
+
+        <label class="form-field">
+          <span>Phone number <strong class="required-mark">*</strong></span>
+          <input name="phone" type="tel" [(ngModel)]="form.phone" required autocomplete="tel" placeholder="+91 98765 43210" />
+          <small *ngIf="submitted && !form.phone.trim()" class="field-error">Phone number is required.</small>
+        </label>
+
+        <label class="form-field company-code-field">
+          <span>Company code <strong class="required-mark">*</strong></span>
+          <input name="companyCode" type="text" [(ngModel)]="form.companyCode" required autocomplete="off" placeholder="Enter the code shared by your organization" />
+          <small class="field-hint">This code is required to connect your learner account with your organization.</small>
+          <small *ngIf="submitted && !form.companyCode.trim()" class="field-error">Company code is required.</small>
+        </label>
+
+        <div class="form-grid">
+          <label class="form-field">
+            <span>Password</span>
+            <input name="password" type="password" [(ngModel)]="form.password" required minlength="8" autocomplete="new-password" placeholder="At least 8 characters" />
+            <small *ngIf="submitted && form.password.length < 8" class="field-error">Password must contain at least 8 characters.</small>
+          </label>
+
+          <label class="form-field">
+            <span>Confirm password</span>
+            <input name="confirmPassword" type="password" [(ngModel)]="form.confirmPassword" required autocomplete="new-password" placeholder="Repeat your password" />
+            <small *ngIf="submitted && !passwordsMatch" class="field-error">Passwords do not match.</small>
+          </label>
+        </div>
+
+        <label class="terms-field">
+          <input name="termsAccepted" type="checkbox" [(ngModel)]="form.termsAccepted" required />
+          <span>I agree to the LearnOS terms and privacy policy.</span>
+        </label>
+
+        <small *ngIf="submitted && !form.termsAccepted" class="field-error terms-error">You must accept the terms to continue.</small>
+
+        <button type="submit" class="submit-button" [disabled]="loading">
+          <span>{{ loading ? 'Creating account...' : 'Create student account' }}</span>
+          <span aria-hidden="true">→</span>
+        </button>
+      </form>
+    </section>
+  </main>
+</div>

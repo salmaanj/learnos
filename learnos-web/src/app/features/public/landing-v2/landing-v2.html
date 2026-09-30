@@ -1,0 +1,124 @@
+<div class="landing-page">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" routerLink="/preview-home" aria-label="LearnOS home">
+        <img class="brand-image" src="learnos-icon.jpg" alt="LearnOS logo" />
+        <span class="brand-name">Learn<span>OS</span></span>
+      </a>
+
+      <nav class="desktop-nav" aria-label="Primary navigation">
+        <a href="#courses">Explore courses</a>
+        <a href="#categories">Categories</a>
+        <a href="#why-learnos">Why LearnOS</a>
+      </nav>
+
+      <div class="header-actions">
+        <a class="sign-in" [routerLink]="['/login']" [queryParams]="audienceLoginParams">Sign in</a>
+        <ng-container *ngIf="isStudentAudience; else headerContactCta">
+          <a class="header-cta" routerLink="/student-register">Get started</a>
+        </ng-container>
+        <ng-template #headerContactCta>
+          <a class="header-cta" href="#contact" (click)="openContact($event)">Contact Us</a>
+        </ng-template>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="audience-strip">
+      <div class="audience-inner">
+        <span class="audience-label">LearnOS for</span>
+        <div class="audience-tabs" role="tablist">
+          <button *ngFor="let audience of audiences" type="button" role="tab" [attr.aria-selected]="activeAudience === audience.id" [class.active]="activeAudience === audience.id" (click)="setAudience(audience.id)">
+            {{ audience.label }}
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="hero-section">
+      <div class="hero-glow hero-glow-one"></div>
+      <div class="hero-glow hero-glow-two"></div>
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span>{{ selectedAudience.eyebrow }}</div>
+          <h1>{{ selectedAudience.title }}</h1>
+          <p class="hero-description">{{ selectedAudience.description }}</p>
+          <div class="hero-actions">
+            <ng-container *ngIf="isStudentAudience; else heroContactCta">
+              <a class="primary-button" routerLink="/student-register">Get started <span aria-hidden="true">→</span></a>
+            </ng-container>
+            <ng-template #heroContactCta>
+              <a class="primary-button" href="#contact" (click)="openContact($event)">Contact Us <span aria-hidden="true">→</span></a>
+            </ng-template>
+            <a class="text-button" href="#why-learnos">See how it works <span aria-hidden="true">↗</span></a>
+          </div>
+          <div class="hero-proof">
+            <div class="avatar-stack"><span class="avatar avatar-one">A</span><span class="avatar avatar-two">R</span><span class="avatar avatar-three">M</span><span class="avatar avatar-four">+</span></div>
+            <div><div class="proof-stars">★★★★★</div><p>Trusted by learners building what is next</p></div>
+          </div>
+        </div>
+
+        <div class="hero-visual">
+          <div class="visual-card visual-main-card">
+            <img src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1200&q=85" alt="Students learning together" />
+            <div class="image-overlay"></div>
+            <div class="visual-caption"><span class="caption-icon">✦</span><div><strong>Learning in action</strong><small>Skills that create possibilities</small></div></div>
+          </div>
+          <div class="floating-card progress-card"><div class="floating-icon blue-icon">↗</div><div><strong>Keep growing</strong><span>+24% this month</span></div></div>
+          <div class="floating-card certificate-card"><div class="certificate-icon">✓</div><div><strong>Earn certificates</strong><span>Show what you know</span></div></div>
+          <div class="visual-dot dot-one"></div><div class="visual-dot dot-two"></div><div class="visual-line"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="search-section">
+      <div class="search-inner">
+        <div class="search-heading"><span class="search-icon">⌕</span><div><span>Start your learning journey</span><strong>What do you want to learn?</strong></div></div>
+        <div class="search-box"><input type="text" placeholder="Try “data analytics”, “leadership”..." aria-label="Search courses" /><button type="button">Search courses <span aria-hidden="true">→</span></button></div>
+      </div>
+    </section>
+
+    <section class="trust-section"><p>Learning for every ambition</p><div class="trust-items"><span>LearnOS Academy</span><span>SKILL <span class="trust-accent">FORWARD</span></span><span class="trust-serif">northstar</span><span>vertex <small>INSTITUTE</small></span><span class="trust-bold">UPSKILL</span></div></section>
+
+    <section class="content-section categories-section" id="categories">
+      <div class="section-heading"><div><span class="section-eyebrow">Find your direction</span><h2>Explore popular categories</h2></div><a href="#courses">View all categories <span>→</span></a></div>
+      <div class="category-grid"><a *ngFor="let category of selectedAudience.categories" class="category-card" [class]="category.color" href="#courses"><span class="category-icon">{{ category.icon }}</span><strong>{{ category.title }}</strong><span>{{ category.count }}</span><i aria-hidden="true">↗</i></a></div>
+    </section>
+
+    <section class="content-section courses-section" id="courses">
+      <div class="section-heading"><div><span class="section-eyebrow">Learn from the best</span><h2>Featured courses</h2></div><a href="#courses">Browse all courses <span>→</span></a></div>
+      <div class="course-grid">
+        <article *ngFor="let course of selectedAudience.courses" class="course-card">
+          <div class="course-image"><img [src]="course.image" [alt]="course.title" /><span class="course-badge">{{ course.category }}</span><button type="button" class="course-save" aria-label="Save course">♡</button></div>
+          <div class="course-content"><div class="course-meta"><span>★ {{ course.rating }}</span><span>{{ course.duration }}</span></div><h3>{{ course.title }}</h3><p>{{ course.instructor }}</p><a class="course-link" [routerLink]="['/login']" [queryParams]="audienceLoginParams">View course <span>→</span></a></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="why-section" id="why-learnos">
+      <div class="why-inner">
+        <div class="why-copy"><span class="section-eyebrow">A better way to learn</span><h2>Learning that fits the way you live and work.</h2><p>LearnOS brings courses, progress, assessments, and certificates together in one clear learning experience.</p>
+          <ng-container *ngIf="isStudentAudience; else whyContactCta"><a class="primary-button" routerLink="/student-register">Start learning today <span>→</span></a></ng-container>
+          <ng-template #whyContactCta><a class="primary-button" href="#contact" (click)="openContact($event)">Contact Us <span>→</span></a></ng-template>
+        </div>
+        <div class="benefit-grid"><div class="benefit-card"><span class="benefit-number">01</span><strong>Practical learning</strong><p>Learn through relevant lessons and real-world projects.</p></div><div class="benefit-card"><span class="benefit-number">02</span><strong>Track your progress</strong><p>See your growth, completed lessons, and achievements.</p></div><div class="benefit-card"><span class="benefit-number">03</span><strong>Celebrate achievement</strong><p>Earn certificates that reflect the skills you have built.</p></div><div class="benefit-card"><span class="benefit-number">04</span><strong>Learn anywhere</strong><p>Continue learning across your web and mobile experience.</p></div></div>
+      </div>
+    </section>
+
+    <section class="contact-section" id="contact">
+      <div class="contact-inner">
+        <div class="contact-copy"><span class="section-eyebrow">Let’s build what’s next</span><h2>Bring better learning to your organization.</h2><p>Tell us a little about your organization and our team will help you find the right LearnOS solution.</p>
+          <div class="contact-details"><div class="contact-detail"><span class="contact-detail-label">Visit us</span><address>BNN Mansion, #413/25, 3rd Floor,<br />80 ft Road, 43rd Cross Road,<br />8th Block, Jayanagar,<br />Bengaluru, Karnataka 560070</address><a href="https://maps.google.com/?q=43rd+Cross+Rd,+Jayanagar,+Bengaluru,+Karnataka+560070" target="_blank" rel="noopener noreferrer">View on Maps →</a></div><div class="contact-detail"><span class="contact-detail-label">Contact</span><a href="mailto:salmaan.j@blute.co.in">business@blute.co.in</a><a href="tel:+917349056167">+91 7349056167</a></div></div>
+        </div>
+
+        <div class="contact-form-card"><span class="section-eyebrow">Get in touch</span><h3>Tell us how we can help.</h3><form #contactForm="ngForm" (ngSubmit)="submitContact()" novalidate><div class="contact-form-grid"><label><span>Your name</span><input name="name" [(ngModel)]="contact.name" required autocomplete="name" /></label><label><span>Organization</span><input name="organization" [(ngModel)]="contact.organization" required autocomplete="organization" /></label><label><span>Work email</span><input name="email" [(ngModel)]="contact.email" required email autocomplete="email" /></label><label><span>Phone number</span><input name="phone" [(ngModel)]="contact.phone" type="tel" autocomplete="tel" /></label></div><label><span>I represent a</span><select name="audience" [(ngModel)]="contact.audience" required><option value="">Select an audience</option><option value="business">Business</option><option value="government">Government organization</option><option value="university">University / College</option></select></label><label><span>Message</span><textarea name="message" [(ngModel)]="contact.message" rows="4" required></textarea></label><button type="submit" class="primary-button" [disabled]="contactForm.invalid">Send enquiry <span>→</span></button><p *ngIf="contactSubmitted" class="form-success" role="status">Thank you. Our team will get back to you shortly.</p></form></div>
+      </div>
+      <div class="map-card"><iframe title="LearnOS office location" src="https://www.google.com/maps?q=43rd+Cross+Rd,+Jayanagar,+Bengaluru,+Karnataka+560070&output=embed" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
+    </section>
+
+    <section class="final-cta"><div><span class="section-eyebrow">Your next chapter starts here</span><h2>Make learning your advantage.</h2></div><ng-container *ngIf="isStudentAudience; else finalContactCta"><a class="primary-button light-button" routerLink="/student-register">Get started with LearnOS <span>→</span></a></ng-container><ng-template #finalContactCta><a class="primary-button light-button" href="#contact" (click)="openContact($event)">Contact Us <span>→</span></a></ng-template></section>
+  </main>
+
+  <footer class="site-footer"><div class="footer-inner"><div class="footer-brand"><a class="brand" routerLink="/preview-home" aria-label="LearnOS home"><img class="brand-image" src="learnos-icon.jpg" alt="LearnOS logo" /><span class="brand-name">Learn<span>OS</span></span></a><p>Learning that moves people forward.</p></div><div class="footer-links"><a href="#courses">Explore courses</a><a href="#categories">Categories</a><a [routerLink]="['/login']" [queryParams]="audienceLoginParams">Sign in</a><a href="#contact" (click)="openContact($event)">Contact Us</a></div><p class="copyright">© 2026 LearnOS. All rights reserved.</p></div></footer>
+</div>

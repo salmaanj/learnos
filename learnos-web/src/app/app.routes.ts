@@ -202,6 +202,11 @@ const homeRedirectGuard = () => {
 };
 
 export const routes: Routes = [
+    {
+    path: '',
+    redirectTo: 'preview-home',
+    pathMatch: 'full'
+  },
   {
     path: 'login',
     loadComponent: () =>
@@ -221,6 +226,20 @@ export const routes: Routes = [
       import(
         './features/public/verify-certificate/verify-certificate'
       ).then(m => m.VerifyCertificate)
+  },
+  {
+  path: 'student-register',
+  loadComponent: () =>
+    import(
+      './features/auth/student-register/student-register'
+    ).then(m => m.StudentRegister)
+},
+  {
+  path: 'preview-home',
+  loadComponent: () =>
+    import(
+      './features/public/landing-v2/landing-v2'
+    ).then(m => m.LandingV2)
   },
   {
     path: 'learn',
