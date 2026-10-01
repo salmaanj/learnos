@@ -111,6 +111,9 @@ export class LearnCourseDetail implements OnInit, OnDestroy {
   private pendingProgressSave: { lessonId: string; watchedSeconds: number; completed: boolean } | null = null;
   private readonly progressSaveIntervalSeconds = 15;
   private readonly completionThresholdSeconds = 2;
+  // Reused so change detection doesn't hand the <iframe> a "new" src on
+  // every tick and force a reload (which kicks it out of full screen).
+  private readonly youtubeEmbedUrlCache = new Map<string, SafeResourceUrl>();
 
   constructor(
     private route: ActivatedRoute,
@@ -163,10 +166,118 @@ export class LearnCourseDetail implements OnInit, OnDestroy {
   ratingStars(): number[] { return [1, 2, 3, 4, 5]; }
   isStarFilled(star: number): boolean { return star <= Math.round(this.averageRating); }
 
-  lessonUrl(lesson: LessonItem): string | null { return resolveMediaUrl(lesson.streamingUrl || lesson.contentUrl); }
-  documentUrl(lesson: LessonItem): string | null { return resolveMediaUrl(lesson.contentUrl || lesson.streamingUrl); }
-  safeUrl(url: string | null): SafeResourceUrl { return this.sanitizer.bypassSecurityTrustResourceUrl(url || ''); }
-  isDocumentLesson(lesson: LessonItem): boolean { return lesson.type === 'PDF' || lesson.type === 'SLIDES'; }
+  lessonUrl(lesson: LessonItem): string | null {
+  return resolveMediaUrl(
+    lesson.streamingUrl || lesson.contentUrl
+  );
+}
+
+documentUrl(lesson: LessonItem): string | null {
+  return resolveMediaUrl(
+    lesson.contentUrl || lesson.streamingUrl
+  );
+}
+
+safeUrl(url: string | null): SafeResourceUrl {
+  return this.sanitizer.bypassSecurityTrustResourceUrl(
+    url || ''
+  );
+}
+
+youtubeVideoId(lesson: LessonItem): string | null {
+  const url =
+    lesson.streamingUrl || lesson.contentUrl;
+
+  return this.extractYouTubeVideoId(url);
+}
+
+isYouTubeLesson(lesson: LessonItem): boolean {
+  return !!this.youtubeVideoId(lesson);
+}
+
+youtubeEmbedUrl(
+  lesson: LessonItem
+): SafeResourceUrl | null {
+  const videoId = this.youtubeVideoId(lesson);
+
+  if (!videoId) {
+    return null;
+  }
+
+  const cached = this.youtubeEmbedUrlCache.get(videoId);
+  if (cached) {
+    return cached;
+  }
+
+  const sanitized = this.safeUrl(
+    `https://www.youtube.com/embed/${videoId}?rel=0&playsinline=1&fs=1`
+  );
+  this.youtubeEmbedUrlCache.set(videoId, sanitized);
+  return sanitized;
+}
+
+private extractYouTubeVideoId(
+  value: string | null | undefined
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  try {
+    const url = new URL(value);
+
+    if (
+      url.hostname === 'youtu.be' ||
+      url.hostname === 'www.youtu.be'
+    ) {
+      return this.cleanYouTubeVideoId(
+        url.pathname.substring(1)
+      );
+    }
+
+    if (
+      url.hostname === 'youtube.com' ||
+      url.hostname === 'www.youtube.com' ||
+      url.hostname === 'm.youtube.com'
+    ) {
+      if (url.pathname === '/watch') {
+        return this.cleanYouTubeVideoId(
+          url.searchParams.get('v')
+        );
+      }
+
+      if (url.pathname.startsWith('/shorts/')) {
+        return this.cleanYouTubeVideoId(
+          url.pathname.split('/')[2]
+        );
+      }
+
+      if (url.pathname.startsWith('/embed/')) {
+        return this.cleanYouTubeVideoId(
+          url.pathname.split('/')[2]
+        );
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
+private cleanYouTubeVideoId(
+  value: string | null | undefined
+): string | null {
+  if (!value) {
+    return null;
+  }
+
+  const id = value.trim().split(/[?&#/]/)[0];
+
+  return /^[A-Za-z0-9_-]{11}$/.test(id)
+    ? id
+    : null;
+}  isDocumentLesson(lesson: LessonItem): boolean { return lesson.type === 'PDF' || lesson.type === 'SLIDES'; }
   isManualCompletionLesson(lesson: LessonItem): boolean { return ['PDF', 'SLIDES', 'TEXT'].includes(lesson.type); }
 
   downloadSelectedLesson(): void {
@@ -362,21 +473,45 @@ console.table(
     });
   }
 
-  private loadProgressAfterContent(): void {
-    if (!this.enrolled) return;
-    this.progressLoading = true;
-    this.service.getCourseProgress(this.courseId).subscribe({
-      next: (res: any) => {
-        const progress = (res?.data || res) as CourseProgressResponse;
-        this.courseProgress = progress;
-        this.applyProgressToLessons(progress.lessons || []);
-        this.openResumeLesson(progress.resumeLessonId);
-        this.progressLoading = false;
+    private loadProgressAfterContent(): void {
+      if (!this.enrolled) {
+        this.openFirstAvailableLesson();
         this.cdr.detectChanges();
-      },
-      error: () => { this.progressLoading = false; this.cdr.detectChanges(); }
-    });
-  }
+        return;
+      }
+
+      this.progressLoading = true;
+
+      this.service.getCourseProgress(this.courseId).subscribe({
+        next: (res: any) => {
+          const progress =
+            (res?.data || res) as CourseProgressResponse;
+
+          this.courseProgress = progress;
+
+          this.applyProgressToLessons(
+            progress.lessons || []
+          );
+
+          // Returning learners resume their previous lesson.
+          this.openResumeLesson(
+            progress.resumeLessonId
+          );
+
+          // First-time learners, or learners without a valid
+          // resume lesson, open the first available lesson.
+          this.openFirstAvailableLesson();
+
+          this.progressLoading = false;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.openFirstAvailableLesson();
+          this.progressLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
+    }
 
   private applyProgressToLessons(progressItems: LessonProgressResponse[]): void {
     const progressByLessonId = new Map(progressItems.map(item => [String(item.lessonId), item]));
@@ -398,6 +533,30 @@ console.table(
     this.selectedLesson = found.lesson;
     this.lastSavedPositionSeconds = found.lesson.watchedSeconds || 0;
   }
+  private openFirstAvailableLesson(): void {
+  if (this.selectedLesson) {
+    return;
+  }
+
+  const firstLesson = this.modules
+    .flatMap(module => module.lessons)
+    .find(lesson => this.isUnlocked(lesson));
+
+  if (!firstLesson) {
+    return;
+  }
+
+  const found = this.findLesson(firstLesson.id);
+
+  if (!found) {
+    return;
+  }
+
+  found.module.expanded = true;
+  this.selectedLesson = found.lesson;
+  this.lastSavedPositionSeconds =
+    found.lesson.watchedSeconds || 0;
+}
 
   private findLesson(lessonId: string): { lesson: LessonItem; module: ModuleItem } | null {
     for (const module of this.modules) {

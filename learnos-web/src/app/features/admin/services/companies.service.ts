@@ -1,9 +1,19 @@
-import { Injectable } from '@angular/core';
+import {
+  Injectable
+} from '@angular/core';
+
 import {
   HttpClient,
   HttpHeaders
 } from '@angular/common/http';
-import { Observable } from 'rxjs';
+
+import {
+  Observable
+} from 'rxjs';
+
+import {
+  environment
+} from '../../../../environments/environment';
 
 export type CompanyPlanCode =
   | 'BASIC'
@@ -65,20 +75,33 @@ export interface Company extends CompanyPayload {
   providedIn: 'root'
 })
 export class CompaniesService {
+
   private readonly baseUrl =
-    'http://localhost:8080/api/v1';
+    environment.apiUrl;
 
   constructor(
     private readonly http: HttpClient
   ) {}
 
-  private headers(): HttpHeaders {
+  private headers(
+    includeContentType = false
+  ): HttpHeaders {
     const token =
-      localStorage.getItem('accessToken') || '';
+      localStorage.getItem('accessToken')
+      || '';
 
-    return new HttpHeaders({
+    let headers = new HttpHeaders({
       Authorization: `Bearer ${token}`
     });
+
+    if (includeContentType) {
+      headers = headers.set(
+        'Content-Type',
+        'application/json'
+      );
+    }
+
+    return headers;
   }
 
   getCompanies(): Observable<Company[]> {
@@ -90,7 +113,9 @@ export class CompaniesService {
     );
   }
 
-  getCompanyById(id: string): Observable<Company> {
+  getCompanyById(
+    id: string
+  ): Observable<Company> {
     return this.http.get<Company>(
       `${this.baseUrl}/companies/${id}`,
       {
@@ -99,7 +124,9 @@ export class CompaniesService {
     );
   }
 
-  getCompany(id: string): Observable<Company> {
+  getCompany(
+    id: string
+  ): Observable<Company> {
     return this.getCompanyById(id);
   }
 
@@ -110,7 +137,7 @@ export class CompaniesService {
       `${this.baseUrl}/companies`,
       payload,
       {
-        headers: this.headers()
+        headers: this.headers(true)
       }
     );
   }
@@ -123,12 +150,14 @@ export class CompaniesService {
       `${this.baseUrl}/companies/${id}`,
       payload,
       {
-        headers: this.headers()
+        headers: this.headers(true)
       }
     );
   }
 
-  deleteCompany(id: string): Observable<void> {
+  deleteCompany(
+    id: string
+  ): Observable<void> {
     return this.http.delete<void>(
       `${this.baseUrl}/companies/${id}`,
       {
@@ -158,7 +187,10 @@ export class CompaniesService {
     id: string,
     file: File
   ): Observable<Company> {
-    return this.uploadCompanyLogo(id, file);
+    return this.uploadCompanyLogo(
+      id,
+      file
+    );
   }
 
   getLogoUrl(
@@ -171,10 +203,11 @@ export class CompaniesService {
     if (
       logoUrl.startsWith('http://')
       || logoUrl.startsWith('https://')
+      || logoUrl.startsWith('blob:')
     ) {
       return logoUrl;
     }
 
-    return `http://localhost:8080/api/v1${logoUrl}`;
+    return `${this.baseUrl}${logoUrl}`;
   }
 }

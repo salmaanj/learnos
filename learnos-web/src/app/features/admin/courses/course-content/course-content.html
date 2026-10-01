@@ -121,6 +121,24 @@
           </div>
 
           <div class="lesson-type-hint">{{ lessonTypeHint }}</div>
+          <div
+            class="field field-full video-url-field"
+            *ngIf="selectedLessonType === 'VIDEO'">
+
+            <label for="lesson-streaming-url">Video URL</label>
+
+            <input
+              id="lesson-streaming-url"
+              type="url"
+              formControlName="streamingUrl"
+              placeholder="Paste a YouTube, MP4, or HLS video URL"
+              autocomplete="url" />
+
+            <small class="field-help">
+              Paste a YouTube link, direct MP4 URL, or HLS .m3u8 URL.
+              You can use this instead of uploading a video file.
+            </small>
+          </div>
           <div class="field field-full"><label>Lesson description</label><textarea class="text-input" formControlName="description" placeholder="A short explanation of this lesson."></textarea></div>
 
           <div class="field field-full" *ngIf="showTextContent"><label>Text content</label><textarea class="text-input text-content-editor" formControlName="textContent" placeholder="Write or paste the lesson content here."></textarea></div>

@@ -2,13 +2,20 @@ import {
   Component,
   OnInit
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
+import {
+  CommonModule
+} from '@angular/common';
+
 import {
   NavigationEnd,
   Router,
   RouterModule
 } from '@angular/router';
-import { filter } from 'rxjs';
+
+import {
+  filter
+} from 'rxjs';
 
 import {
   AuthService
@@ -21,11 +28,15 @@ import {
 @Component({
   selector: 'app-admin-shell',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [
+    CommonModule,
+    RouterModule
+  ],
   templateUrl: './admin-shell.html',
   styleUrl: './admin-shell.scss'
 })
 export class AdminShell implements OnInit {
+
   showActionButton = false;
   actionLabel = '';
   actionRoute = '';
@@ -49,6 +60,7 @@ export class AdminShell implements OnInit {
         }
       ]
     },
+
     {
       section: 'Administration',
       superAdminOnly: true,
@@ -57,9 +69,15 @@ export class AdminShell implements OnInit {
           label: 'Roles',
           route: '/admin/roles',
           exact: true
+        },
+        {
+          label: 'Enquiries',
+          route: '/admin/enquiries',
+          exact: true
         }
       ]
     },
+
     {
       section: 'Courses',
       items: [
@@ -95,6 +113,7 @@ export class AdminShell implements OnInit {
         }
       ]
     },
+
     {
       section: 'Learners',
       items: [
@@ -110,6 +129,7 @@ export class AdminShell implements OnInit {
         }
       ]
     },
+
     {
       section: 'Assess',
       items: [
@@ -125,6 +145,7 @@ export class AdminShell implements OnInit {
         }
       ]
     },
+
     {
       section: 'Business',
       items: [
@@ -135,6 +156,7 @@ export class AdminShell implements OnInit {
         }
       ]
     },
+
     {
       section: 'Companies',
       adminOnly: true,
@@ -151,6 +173,7 @@ export class AdminShell implements OnInit {
         }
       ]
     },
+
     {
       section: 'Analytics',
       items: [
@@ -169,7 +192,9 @@ export class AdminShell implements OnInit {
     private readonly subscriptionService: SubscriptionService
   ) {
     if (this.authService.isLearner()) {
-      this.router.navigateByUrl('/learn/courses');
+      this.router.navigateByUrl(
+        '/learn/courses'
+      );
       return;
     }
 
@@ -178,7 +203,9 @@ export class AdminShell implements OnInit {
 
     this.router.events
       .pipe(
-        filter(event => event instanceof NavigationEnd)
+        filter(
+          event => event instanceof NavigationEnd
+        )
       )
       .subscribe(() => {
         this.updateTopAction();
@@ -196,12 +223,15 @@ export class AdminShell implements OnInit {
     const role = this.getResolvedRole();
 
     const email = (
-      this.authService.getCurrentUser()?.email || ''
+      this.authService
+        .getCurrentUser()
+        ?.email || ''
     )
       .trim()
       .toLowerCase();
 
     return role === 'ADMIN'
+      || role === 'SUPER_ADMIN'
       || email === 'admin@blute.co.in';
   }
 
@@ -218,48 +248,63 @@ export class AdminShell implements OnInit {
       && !this.authService.isSubscriptionActive();
   }
 
-shouldShowNavItem(label: string): boolean {
-  if (label === 'Roles') {
-    return this.canViewRoles;
+  shouldShowNavItem(
+    label: string
+  ): boolean {
+    if (
+      label === 'Roles'
+      || label === 'Enquiries'
+    ) {
+      return this.canViewRoles;
+    }
+
+    if (label === 'My Live Classes') {
+      return this.canViewMyLiveClasses;
+    }
+
+    if (this.isPendingCompanyAdmin) {
+      return label === 'Plans';
+    }
+
+    if (
+      this.authService.isSuperAdmin()
+      || this.getResolvedRole() === 'ADMIN'
+    ) {
+      return true;
+    }
+
+    const permissionByLabel: Record<
+      string,
+      string
+    > = {
+      'All courses': 'COURSES_VIEW',
+      'Course builder': 'COURSES_UPDATE',
+      'Content library':
+        'CONTENT_LIBRARY_MANAGE',
+      'Categories': 'COURSES_VIEW',
+      'Live classes': 'LIVE_CLASSES_VIEW',
+      'Learners': 'LEARNERS_VIEW',
+      'Batches & groups': 'BATCHES_VIEW',
+      'Tests & quizzes': 'QUIZZES_VIEW',
+      'Certifications':
+        'CERTIFICATES_VIEW',
+      'Analytics': 'ANALYTICS_VIEW',
+      'Company users':
+        'COMPANY_USERS_VIEW',
+      'Companies':
+        'COMPANIES_VIEW',
+      'Plans': 'PLANS_VIEW'
+    };
+
+    const permission =
+      permissionByLabel[label];
+
+    return permission
+      ? this.authService.hasPermission(
+          permission
+        )
+      : false;
   }
-
-  if (this.isPendingCompanyAdmin) {
-    return label === 'Plans';
-  }
-
-  if (this.authService.isSuperAdmin()) {
-    return true;
-  }
-
-  if (this.getResolvedRole() === 'ADMIN') {
-    return true;
-  }
-
-  // keep the existing permissionByLabel code below
-
-  const permissionByLabel: Record<string, string> = {
-    'All courses': 'COURSES_VIEW',
-    'Course builder': 'COURSES_UPDATE',
-    'Content library': 'CONTENT_LIBRARY_MANAGE',
-    'Categories': 'COURSES_VIEW',
-    'Live classes': 'LIVE_CLASSES_VIEW',
-    'My Live Classes': 'LIVE_CLASSES_VIEW',
-    'Learners': 'LEARNERS_VIEW',
-    'Batches & groups': 'BATCHES_VIEW',
-    'Tests & quizzes': 'QUIZZES_VIEW',
-    'Certifications': 'CERTIFICATES_VIEW',
-    'Analytics': 'ANALYTICS_VIEW',
-    'Company users': 'COMPANY_USERS_VIEW',
-    'Companies': 'COMPANIES_VIEW',
-    'Plans': 'PLANS_VIEW'
-  };
-
-  const permission = permissionByLabel[label];
-
-  return permission
-    ? this.authService.hasPermission(permission)
-    : false;
-}
 
   getNavRoute(label: string): string {
     if (label === 'Plans') {
@@ -296,6 +341,7 @@ shouldShowNavItem(label: string): boolean {
 
           this.subscriptionLoading = false;
         },
+
         error: err => {
           this.authService.setSubscriptionStatus(
             'PENDING_PAYMENT'
@@ -313,7 +359,9 @@ shouldShowNavItem(label: string): boolean {
 
   private getResolvedRole(): string {
     const currentUserRole =
-      this.authService.getCurrentUser()?.role;
+      this.authService
+        .getCurrentUser()
+        ?.role;
 
     const storedRole =
       this.authService.getUserRole();
@@ -354,7 +402,9 @@ shouldShowNavItem(label: string): boolean {
       this.authService.getUserName();
   }
 
-  private isLearnerFormRoute(url: string): boolean {
+  private isLearnerFormRoute(
+    url: string
+  ): boolean {
     return url.startsWith(
       '/admin/companies/users/'
     ) && url.includes('role=LEARNER');
@@ -368,16 +418,24 @@ shouldShowNavItem(label: string): boolean {
       return;
     }
 
-    if (url.startsWith('/admin/roles')) {
+    if (
+      url.startsWith('/admin/roles')
+      || url.startsWith('/admin/enquiries')
+    ) {
       this.clearTopAction();
       return;
     }
 
-    if (url.startsWith('/admin/companies/users')) {
+    if (
+      url.startsWith(
+        '/admin/companies/users'
+      )
+    ) {
       if (this.canViewCompanyManagement) {
         this.showActionButton = true;
         this.actionLabel = '+ New User';
-        this.actionRoute = '/admin/companies/users/new';
+        this.actionRoute =
+          '/admin/companies/users/new';
       } else {
         this.clearTopAction();
       }
@@ -387,12 +445,18 @@ shouldShowNavItem(label: string): boolean {
 
     if (
       url.startsWith('/admin/companies')
-      && !url.startsWith('/admin/companies/users')
+      && !url.startsWith(
+        '/admin/companies/users'
+      )
     ) {
-      if (this.authService.isSuperAdmin()) {
+      if (
+        this.authService.isSuperAdmin()
+        || this.getResolvedRole() === 'ADMIN'
+      ) {
         this.showActionButton = true;
         this.actionLabel = '+ New Company';
-        this.actionRoute = '/admin/companies/new';
+        this.actionRoute =
+          '/admin/companies/new';
       } else {
         this.clearTopAction();
       }
@@ -407,10 +471,15 @@ shouldShowNavItem(label: string): boolean {
       return;
     }
 
-    if (url.startsWith('/admin/courses/categories')) {
+    if (
+      url.startsWith(
+        '/admin/courses/categories'
+      )
+    ) {
       this.showActionButton = true;
       this.actionLabel = '+ New Category';
-      this.actionRoute = '/admin/courses/categories/new';
+      this.actionRoute =
+        '/admin/courses/categories/new';
       return;
     }
 
@@ -433,12 +502,21 @@ shouldShowNavItem(label: string): boolean {
   private updatePageTitle(): void {
     const url = this.router.url;
 
+    if (url.startsWith('/admin/enquiries')) {
+      this.pageTitle = 'Enquiries';
+      return;
+    }
+
     if (url.startsWith('/admin/roles')) {
       this.pageTitle = 'Roles';
       return;
     }
 
-    if (url.startsWith('/admin/tutor-live-classes')) {
+    if (
+      url.startsWith(
+        '/admin/tutor-live-classes'
+      )
+    ) {
       this.pageTitle = 'My Live Classes';
       return;
     }
@@ -448,7 +526,11 @@ shouldShowNavItem(label: string): boolean {
       return;
     }
 
-    if (url.startsWith('/admin/companies/users')) {
+    if (
+      url.startsWith(
+        '/admin/companies/users'
+      )
+    ) {
       this.pageTitle = 'Company Users';
       return;
     }
@@ -458,7 +540,11 @@ shouldShowNavItem(label: string): boolean {
       return;
     }
 
-    if (url.startsWith('/admin/courses/categories')) {
+    if (
+      url.startsWith(
+        '/admin/courses/categories'
+      )
+    ) {
       this.pageTitle = 'Categories';
       return;
     }
@@ -484,12 +570,18 @@ shouldShowNavItem(label: string): boolean {
       return;
     }
 
-    if (url.startsWith('/admin/live-classes')) {
+    if (
+      url.startsWith('/admin/live-classes')
+    ) {
       this.pageTitle = 'Live Classes';
       return;
     }
 
-    if (url.startsWith('/admin/content-library')) {
+    if (
+      url.startsWith(
+        '/admin/content-library'
+      )
+    ) {
       this.pageTitle = 'Content Library';
       return;
     }
@@ -504,7 +596,11 @@ shouldShowNavItem(label: string): boolean {
       return;
     }
 
-    if (url.startsWith('/admin/certifications')) {
+    if (
+      url.startsWith(
+        '/admin/certifications'
+      )
+    ) {
       this.pageTitle = 'Certifications';
       return;
     }
@@ -516,9 +612,12 @@ shouldShowNavItem(label: string): boolean {
 
     if (
       url.startsWith('/admin/payments')
-      || url.startsWith('/admin/subscription')
+      || url.startsWith(
+        '/admin/subscription'
+      )
     ) {
-      this.pageTitle = 'Subscription & Payments';
+      this.pageTitle =
+        'Subscription & Payments';
       return;
     }
 

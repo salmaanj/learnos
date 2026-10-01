@@ -799,4 +799,12 @@ $orange-soft: #fed7aa;
   margin-top: 14px;
   text-decoration: none;
 }
+.youtube-viewer {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  min-height: 240px;
+  display: block;
+  border: 0;
+  background: #000;
+}
 }

@@ -27,13 +27,17 @@
         *ngFor="let group of navItems"
       >
         <ng-container
-          *ngIf="!group.adminOnly || canViewCompanyManagement"
+          *ngIf="
+            !group.adminOnly
+            || canViewCompanyManagement
+          "
         >
           <ng-container
             *ngIf="
-              group.items.length > 0 &&
-              group.items.some(
-                item => shouldShowNavItem(item.label)
+              group.items.length > 0
+              && group.items.some(
+                item =>
+                  shouldShowNavItem(item.label)
               )
             "
           >
@@ -45,7 +49,13 @@
               *ngFor="let item of group.items"
             >
               <a
-                *ngIf="shouldShowNavItem(item.label)"
+                *ngIf="
+                  shouldShowNavItem(item.label)
+                  && (
+                    item.label !== 'My Live Classes'
+                    || canViewMyLiveClasses
+                  )
+                "
                 class="sb-item"
                 [routerLink]="
                   item.label === 'Plans'

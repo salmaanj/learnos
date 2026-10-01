@@ -39,26 +39,63 @@ public class LiveClassService {
             Pageable pageable,
             String username
     ) {
-        User currentUser = requireCurrentUser(username);
-        String normalizedQuery = blankToNull(query);
+        User currentUser =
+                requireCurrentUser(username);
+
+        String normalizedQuery =
+                blankToNull(query);
 
         Page<LiveClass> liveClasses;
 
         if (isSuperAdmin(currentUser)) {
-            liveClasses = findForSuperAdmin(normalizedQuery, status, pageable);
+            liveClasses =
+                    findForSuperAdmin(
+                            normalizedQuery,
+                            status,
+                            pageable
+                    );
+        } else if (isTutor(currentUser)) {
+            liveClasses =
+                    findForTutor(
+                            currentUser.getId(),
+                            normalizedQuery,
+                            status,
+                            pageable
+                    );
         } else {
-            Company company = requireCompany(currentUser);
-            liveClasses = findForCompany(company.getId(), normalizedQuery, status, pageable);
+            Company company =
+                    requireCompany(currentUser);
+
+            liveClasses =
+                    findForCompany(
+                            company.getId(),
+                            normalizedQuery,
+                            status,
+                            pageable
+                    );
         }
 
-        return liveClasses.map(this::mapToResponse);
+        return liveClasses.map(
+                this::mapToResponse
+        );
     }
 
     @Transactional(readOnly = true)
-    public LiveClassResponse getLiveClass(UUID id, String username) {
-        User currentUser = requireCurrentUser(username);
-        LiveClass liveClass = getLiveClassOrThrow(id);
-        assertCanAccessLiveClass(currentUser, liveClass);
+    public LiveClassResponse getLiveClass(
+            UUID id,
+            String username
+    ) {
+        User currentUser =
+                requireCurrentUser(username);
+
+        LiveClass liveClass =
+                getLiveClassOrThrow(id);
+
+        assertCanAccessLiveClass(
+                currentUser,
+                liveClass
+        );
+
         return mapToResponse(liveClass);
     }
 
@@ -66,35 +103,95 @@ public class LiveClassService {
             LiveClassRequest request,
             String username
     ) {
-        User currentUser = requireCurrentUser(username);
-        assertCanManageLiveClasses(currentUser);
+        User currentUser =
+                requireCurrentUser(username);
 
-        Company company = resolveCompanyForCreate(currentUser, request.companyId());
-        Course course = resolveCourse(request.courseId(), company);
-        User instructor = resolveInstructor(request.instructorId(), company);
+        assertCanManageLiveClasses(
+                currentUser
+        );
+
+        Company company =
+                resolveCompanyForCreate(
+                        currentUser,
+                        request.companyId()
+                );
+
+        Course course =
+                resolveCourse(
+                        request.courseId(),
+                        company
+                );
+
+        User instructor =
+                resolveInstructor(
+                        request.instructorId(),
+                        company
+                );
 
         validateRequest(request);
 
-        LiveClass liveClass = LiveClass.builder()
-                .company(company)
-                .course(course)
-                .instructor(instructor)
-                .title(request.title().trim())
-                .description(blankToNull(request.description()))
-                .startAt(request.startAt())
-                .endAt(request.endAt())
-                .timezone(request.timezone().trim())
-                .provider(request.provider())
-                .meetingUrl(request.meetingUrl().trim())
-                .meetingPassword(blankToNull(request.meetingPassword()))
-                .capacity(request.capacity())
-                .thumbnailUrl(blankToNull(request.thumbnailUrl()))
-                .recordingUrl(blankToNull(request.recordingUrl()))
-                .status(request.status() != null ? request.status() : LiveClassStatus.DRAFT)
-                .createdBy(currentUser)
-                .build();
+        LiveClass liveClass =
+                LiveClass.builder()
+                        .company(company)
+                        .course(course)
+                        .instructor(instructor)
+                        .title(
+                                request.title()
+                                        .trim()
+                        )
+                        .description(
+                                blankToNull(
+                                        request.description()
+                                )
+                        )
+                        .startAt(
+                                request.startAt()
+                        )
+                        .endAt(
+                                request.endAt()
+                        )
+                        .timezone(
+                                request.timezone()
+                                        .trim()
+                        )
+                        .provider(
+                                request.provider()
+                        )
+                        .meetingUrl(
+                                request.meetingUrl()
+                                        .trim()
+                        )
+                        .meetingPassword(
+                                blankToNull(
+                                        request.meetingPassword()
+                                )
+                        )
+                        .capacity(
+                                request.capacity()
+                        )
+                        .thumbnailUrl(
+                                blankToNull(
+                                        request.thumbnailUrl()
+                                )
+                        )
+                        .recordingUrl(
+                                blankToNull(
+                                        request.recordingUrl()
+                                )
+                        )
+                        .status(
+                                request.status() != null
+                                        ? request.status()
+                                        : LiveClassStatus.DRAFT
+                        )
+                        .createdBy(currentUser)
+                        .build();
 
-        return mapToResponse(liveClassRepository.save(liveClass));
+        return mapToResponse(
+                liveClassRepository.save(
+                        liveClass
+                )
+        );
     }
 
     public LiveClassResponse updateLiveClass(
@@ -102,44 +199,97 @@ public class LiveClassService {
             LiveClassRequest request,
             String username
     ) {
-        User currentUser = requireCurrentUser(username);
-        assertCanManageLiveClasses(currentUser);
+        User currentUser =
+                requireCurrentUser(username);
 
-        LiveClass liveClass = getLiveClassOrThrow(id);
-        assertCanAccessLiveClass(currentUser, liveClass);
-
-        Company company = resolveCompanyForUpdate(
-                currentUser,
-                request.companyId(),
-                liveClass.getCompany()
+        assertCanManageLiveClasses(
+                currentUser
         );
 
-        Course course = resolveCourse(request.courseId(), company);
-        User instructor = resolveInstructor(request.instructorId(), company);
+        LiveClass liveClass =
+                getLiveClassOrThrow(id);
+
+        assertCanAccessLiveClass(
+                currentUser,
+                liveClass
+        );
+
+        Company company =
+                resolveCompanyForUpdate(
+                        currentUser,
+                        request.companyId(),
+                        liveClass.getCompany()
+                );
+
+        Course course =
+                resolveCourse(
+                        request.courseId(),
+                        company
+                );
+
+        User instructor =
+                resolveInstructor(
+                        request.instructorId(),
+                        company
+                );
 
         validateRequest(request);
 
         liveClass.setCompany(company);
         liveClass.setCourse(course);
         liveClass.setInstructor(instructor);
-        liveClass.setTitle(request.title().trim());
-        liveClass.setDescription(blankToNull(request.description()));
-        liveClass.setStartAt(request.startAt());
-        liveClass.setEndAt(request.endAt());
-        liveClass.setTimezone(request.timezone().trim());
-        liveClass.setProvider(request.provider());
-        liveClass.setMeetingUrl(request.meetingUrl().trim());
-        liveClass.setMeetingPassword(blankToNull(request.meetingPassword()));
-        liveClass.setCapacity(request.capacity());
-        liveClass.setThumbnailUrl(blankToNull(request.thumbnailUrl()));
-        liveClass.setRecordingUrl(blankToNull(request.recordingUrl()));
+        liveClass.setTitle(
+                request.title().trim()
+        );
+        liveClass.setDescription(
+                blankToNull(
+                        request.description()
+                )
+        );
+        liveClass.setStartAt(
+                request.startAt()
+        );
+        liveClass.setEndAt(
+                request.endAt()
+        );
+        liveClass.setTimezone(
+                request.timezone().trim()
+        );
+        liveClass.setProvider(
+                request.provider()
+        );
+        liveClass.setMeetingUrl(
+                request.meetingUrl().trim()
+        );
+        liveClass.setMeetingPassword(
+                blankToNull(
+                        request.meetingPassword()
+                )
+        );
+        liveClass.setCapacity(
+                request.capacity()
+        );
+        liveClass.setThumbnailUrl(
+                blankToNull(
+                        request.thumbnailUrl()
+                )
+        );
+        liveClass.setRecordingUrl(
+                blankToNull(
+                        request.recordingUrl()
+                )
+        );
         liveClass.setStatus(
                 request.status() != null
                         ? request.status()
                         : liveClass.getStatus()
         );
 
-        return mapToResponse(liveClassRepository.save(liveClass));
+        return mapToResponse(
+                liveClassRepository.save(
+                        liveClass
+                )
+        );
     }
 
     public LiveClassResponse updateStatus(
@@ -148,20 +298,38 @@ public class LiveClassService {
             String username
     ) {
         if (status == null) {
-            throw new RuntimeException("Status is required");
+            throw new RuntimeException(
+                    "Status is required"
+            );
         }
 
-        User currentUser = requireCurrentUser(username);
-        assertCanManageLiveClasses(currentUser);
+        User currentUser =
+                requireCurrentUser(username);
 
-        LiveClass liveClass = getLiveClassOrThrow(id);
-        assertCanAccessLiveClass(currentUser, liveClass);
+        assertCanManageLiveClasses(
+                currentUser
+        );
+
+        LiveClass liveClass =
+                getLiveClassOrThrow(id);
+
+        assertCanAccessLiveClass(
+                currentUser,
+                liveClass
+        );
 
         liveClass.setStatus(status);
-        return mapToResponse(liveClassRepository.save(liveClass));
+
+        return mapToResponse(
+                liveClassRepository.save(
+                        liveClass
+                )
+        );
     }
 
-    private void assertCanManageLiveClasses(User currentUser) {
+    private void assertCanManageLiveClasses(
+            User currentUser
+    ) {
         if (isSuperAdmin(currentUser)) {
             return;
         }
@@ -176,7 +344,14 @@ public class LiveClassService {
             );
         }
 
-        requireCompany(currentUser);
+        if (
+                !isTutor(currentUser)
+                        && currentUser.getCompany() == null
+        ) {
+            throw new RuntimeException(
+                    "Your user account is not assigned to a company"
+            );
+        }
     }
 
     private Page<LiveClass> findForSuperAdmin(
@@ -184,23 +359,81 @@ public class LiveClassService {
             LiveClassStatus status,
             Pageable pageable
     ) {
-        if (query != null && status != null) {
-            return liveClassRepository.findByStatusAndTitleContainingIgnoreCase(
-                    status, query, pageable
-            );
+        if (
+                query != null
+                        && status != null
+        ) {
+            return liveClassRepository
+                    .findByStatusAndTitleContainingIgnoreCase(
+                            status,
+                            query,
+                            pageable
+                    );
         }
 
         if (query != null) {
-            return liveClassRepository.findByTitleContainingIgnoreCase(
-                    query, pageable
-            );
+            return liveClassRepository
+                    .findByTitleContainingIgnoreCase(
+                            query,
+                            pageable
+                    );
         }
 
         if (status != null) {
-            return liveClassRepository.findByStatus(status, pageable);
+            return liveClassRepository
+                    .findByStatus(
+                            status,
+                            pageable
+                    );
         }
 
-        return liveClassRepository.findAll(pageable);
+        return liveClassRepository.findAll(
+                pageable
+        );
+    }
+
+    private Page<LiveClass> findForTutor(
+            UUID tutorId,
+            String query,
+            LiveClassStatus status,
+            Pageable pageable
+    ) {
+        if (
+                query != null
+                        && status != null
+        ) {
+            return liveClassRepository
+                    .findByInstructor_IdAndStatusAndTitleContainingIgnoreCase(
+                            tutorId,
+                            status,
+                            query,
+                            pageable
+                    );
+        }
+
+        if (query != null) {
+            return liveClassRepository
+                    .findByInstructor_IdAndTitleContainingIgnoreCase(
+                            tutorId,
+                            query,
+                            pageable
+                    );
+        }
+
+        if (status != null) {
+            return liveClassRepository
+                    .findByInstructor_IdAndStatus(
+                            tutorId,
+                            status,
+                            pageable
+                    );
+        }
+
+        return liveClassRepository
+                .findByInstructor_Id(
+                        tutorId,
+                        pageable
+                );
     }
 
     private Page<LiveClass> findForCompany(
@@ -209,32 +442,53 @@ public class LiveClassService {
             LiveClassStatus status,
             Pageable pageable
     ) {
-        if (query != null && status != null) {
+        if (
+                query != null
+                        && status != null
+        ) {
             return liveClassRepository
                     .findByCompany_IdAndStatusAndTitleContainingIgnoreCase(
-                            companyId, status, query, pageable
+                            companyId,
+                            status,
+                            query,
+                            pageable
                     );
         }
 
         if (query != null) {
             return liveClassRepository
                     .findByCompany_IdAndTitleContainingIgnoreCase(
-                            companyId, query, pageable
+                            companyId,
+                            query,
+                            pageable
                     );
         }
 
         if (status != null) {
-            return liveClassRepository.findByCompany_IdAndStatus(
-                    companyId, status, pageable
-            );
+            return liveClassRepository
+                    .findByCompany_IdAndStatus(
+                            companyId,
+                            status,
+                            pageable
+                    );
         }
 
-        return liveClassRepository.findByCompany_Id(companyId, pageable);
+        return liveClassRepository.findByCompany_Id(
+                companyId,
+                pageable
+        );
     }
 
-    private LiveClass getLiveClassOrThrow(UUID id) {
-        return liveClassRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Live class not found"));
+    private LiveClass getLiveClassOrThrow(
+            UUID id
+    ) {
+        return liveClassRepository
+                .findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Live class not found"
+                        )
+                );
     }
 
     private Company resolveCompanyForCreate(
@@ -246,11 +500,18 @@ public class LiveClassService {
         }
 
         if (requestedCompanyId == null) {
-            throw new RuntimeException("Company is required for live classes");
+            throw new RuntimeException(
+                    "Company is required for live classes"
+            );
         }
 
-        return companyRepository.findById(requestedCompanyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyRepository
+                .findById(requestedCompanyId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Company not found"
+                        )
+                );
     }
 
     private Company resolveCompanyForUpdate(
@@ -266,21 +527,38 @@ public class LiveClassService {
             return existingCompany;
         }
 
-        return companyRepository.findById(requestedCompanyId)
-                .orElseThrow(() -> new RuntimeException("Company not found"));
+        return companyRepository
+                .findById(requestedCompanyId)
+                .orElseThrow(() ->
+                        new RuntimeException(
+                                "Company not found"
+                        )
+                );
     }
 
-    private Course resolveCourse(UUID courseId, Company company) {
+    private Course resolveCourse(
+            UUID courseId,
+            Company company
+    ) {
         if (courseId == null) {
             return null;
         }
 
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new RuntimeException("Course not found"));
+        Course course =
+                courseRepository
+                        .findById(courseId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Course not found"
+                                )
+                        );
 
         if (
                 course.getCompany() == null
-                        || !course.getCompany().getId().equals(company.getId())
+                        || company == null
+                        || !course.getCompany()
+                        .getId()
+                        .equals(company.getId())
         ) {
             throw new RuntimeException(
                     "The selected course does not belong to this company"
@@ -290,17 +568,30 @@ public class LiveClassService {
         return course;
     }
 
-    private User resolveInstructor(UUID instructorId, Company company) {
+    private User resolveInstructor(
+            UUID instructorId,
+            Company company
+    ) {
         if (instructorId == null) {
             return null;
         }
 
-        User instructor = userRepository.findById(instructorId)
-                .orElseThrow(() -> new RuntimeException("Instructor not found"));
+        User instructor =
+                userRepository
+                        .findById(instructorId)
+                        .orElseThrow(() ->
+                                new RuntimeException(
+                                        "Instructor not found"
+                                )
+                        );
 
         if (
                 instructor.getCompany() == null
-                        || !instructor.getCompany().getId().equals(company.getId())
+                        || company == null
+                        || !instructor
+                        .getCompany()
+                        .getId()
+                        .equals(company.getId())
         ) {
             throw new RuntimeException(
                     "The selected instructor does not belong to this company"
@@ -310,22 +601,36 @@ public class LiveClassService {
         return instructor;
     }
 
-    private void validateRequest(LiveClassRequest request) {
+    private void validateRequest(
+            LiveClassRequest request
+    ) {
         if (
                 request.startAt() == null
                         || request.endAt() == null
-                        || !request.endAt().isAfter(request.startAt())
+                        || !request.endAt()
+                        .isAfter(
+                                request.startAt()
+                        )
         ) {
             throw new RuntimeException(
                     "End date and time must be after start date and time"
             );
         }
 
-        if (request.capacity() != null && request.capacity() < 1) {
-            throw new RuntimeException("Capacity must be at least 1");
+        if (
+                request.capacity() != null
+                        && request.capacity() < 1
+        ) {
+            throw new RuntimeException(
+                    "Capacity must be at least 1"
+            );
         }
 
-        if (!isHttpUrl(request.meetingUrl())) {
+        if (
+                !isHttpUrl(
+                        request.meetingUrl()
+                )
+        ) {
             throw new RuntimeException(
                     "Meeting URL must start with http:// or https://"
             );
@@ -340,29 +645,64 @@ public class LiveClassService {
             return;
         }
 
+        if (isTutor(currentUser)) {
+            if (
+                    liveClass.getInstructor() == null
+                            || currentUser.getId() == null
+                            || !currentUser.getId()
+                            .equals(
+                                    liveClass
+                                            .getInstructor()
+                                            .getId()
+                            )
+            ) {
+                throw new RuntimeException(
+                        "Tutors can only access their assigned live classes"
+                );
+            }
+
+            return;
+        }
+
         if (
                 currentUser.getCompany() == null
                         || liveClass.getCompany() == null
-                        || !currentUser.getCompany().getId().equals(
-                        liveClass.getCompany().getId()
-                )
+                        || !currentUser
+                        .getCompany()
+                        .getId()
+                        .equals(
+                                liveClass
+                                        .getCompany()
+                                        .getId()
+                        )
         ) {
-            throw new RuntimeException("Access denied");
+            throw new RuntimeException(
+                    "Access denied"
+            );
         }
     }
 
-    private User requireCurrentUser(String username) {
-        User currentUser = getCurrentUser(username);
+    private User requireCurrentUser(
+            String username
+    ) {
+        User currentUser =
+                getCurrentUser(username);
 
         if (currentUser == null) {
-            throw new RuntimeException("User not found");
+            throw new RuntimeException(
+                    "User not found"
+            );
         }
 
         return currentUser;
     }
 
-    private Company requireCompany(User currentUser) {
-        if (currentUser.getCompany() == null) {
+    private Company requireCompany(
+            User currentUser
+    ) {
+        if (
+                currentUser.getCompany() == null
+        ) {
             throw new RuntimeException(
                     "Your user account is not assigned to a company"
             );
@@ -371,46 +711,90 @@ public class LiveClassService {
         return currentUser.getCompany();
     }
 
-    private User getCurrentUser(String username) {
+    private User getCurrentUser(
+            String username
+    ) {
         String email = username;
 
-        if (email == null || email.isBlank()) {
-            Authentication authentication = SecurityContextHolder
-                    .getContext()
-                    .getAuthentication();
+        if (
+                email == null
+                        || email.isBlank()
+        ) {
+            Authentication authentication =
+                    SecurityContextHolder
+                            .getContext()
+                            .getAuthentication();
 
             if (authentication != null) {
                 email = authentication.getName();
             }
         }
 
-        if (email == null || email.isBlank()) {
+        if (
+                email == null
+                        || email.isBlank()
+        ) {
             return null;
         }
 
-        return userRepository.findByEmail(email).orElse(null);
+        return userRepository
+                .findByEmail(email)
+                .orElse(null);
     }
 
-    private boolean isSuperAdmin(User user) {
+    private boolean isTutor(
+            User user
+    ) {
+        return user != null
+                && user.getRole() == Role.TUTOR;
+    }
+
+    private boolean isSuperAdmin(
+            User user
+    ) {
         return user != null
                 && user.getEmail() != null
-                && user.getEmail().equalsIgnoreCase("admin@blute.co.in");
+                && user.getEmail()
+                .equalsIgnoreCase(
+                        "admin@blute.co.in"
+                );
     }
 
-    private LiveClassResponse mapToResponse(LiveClass liveClass) {
-        Company company = liveClass.getCompany();
-        Course course = liveClass.getCourse();
-        User instructor = liveClass.getInstructor();
-        User createdBy = liveClass.getCreatedBy();
+    private LiveClassResponse mapToResponse(
+            LiveClass liveClass
+    ) {
+        Company company =
+                liveClass.getCompany();
+
+        Course course =
+                liveClass.getCourse();
+
+        User instructor =
+                liveClass.getInstructor();
+
+        User createdBy =
+                liveClass.getCreatedBy();
 
         return new LiveClassResponse(
                 liveClass.getId(),
-                company != null ? company.getId() : null,
-                company != null ? company.getName() : null,
-                course != null ? course.getId() : null,
-                course != null ? course.getTitle() : null,
-                instructor != null ? instructor.getId() : null,
-                instructor != null ? instructor.getFullName() : null,
+                company != null
+                        ? company.getId()
+                        : null,
+                company != null
+                        ? company.getName()
+                        : null,
+                course != null
+                        ? course.getId()
+                        : null,
+                course != null
+                        ? course.getTitle()
+                        : null,
+                instructor != null
+                        ? instructor.getId()
+                        : null,
+                instructor != null
+                        ? instructor.getFullName()
+                        : null,
                 liveClass.getTitle(),
                 liveClass.getDescription(),
                 liveClass.getStartAt(),
@@ -422,29 +806,46 @@ public class LiveClassService {
                 liveClass.getStatus(),
                 liveClass.getThumbnailUrl(),
                 liveClass.getRecordingUrl(),
-                createdBy != null ? createdBy.getId() : null,
-                createdBy != null ? createdBy.getFullName() : null,
+                createdBy != null
+                        ? createdBy.getId()
+                        : null,
+                createdBy != null
+                        ? createdBy.getFullName()
+                        : null,
                 liveClass.getCreatedAt(),
                 liveClass.getUpdatedAt()
         );
     }
 
-    private String blankToNull(String value) {
-        if (value == null || value.isBlank()) {
+    private String blankToNull(
+            String value
+    ) {
+        if (
+                value == null
+                        || value.isBlank()
+        ) {
             return null;
         }
 
         return value.trim();
     }
 
-    private boolean isHttpUrl(String value) {
+    private boolean isHttpUrl(
+            String value
+    ) {
         if (value == null) {
             return false;
         }
 
-        String normalized = value.trim().toLowerCase();
+        String normalized =
+                value.trim()
+                        .toLowerCase();
 
-        return normalized.startsWith("http://")
-                || normalized.startsWith("https://");
+        return normalized.startsWith(
+                "http://"
+        )
+                || normalized.startsWith(
+                "https://"
+        );
     }
 }

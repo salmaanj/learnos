@@ -561,4 +561,15 @@
   .library-use-button {
     margin-left: 44px;
   }
+  .video-url-field input {
+  width: 100%;
+}
+
+.field-help {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-secondary, #8d96a8);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
 }

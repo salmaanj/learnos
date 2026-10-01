@@ -35,6 +35,30 @@ public interface LiveClassRepository
             Pageable pageable
     );
 
+    Page<LiveClass> findByInstructor_Id(
+            UUID instructorId,
+            Pageable pageable
+    );
+
+    Page<LiveClass> findByInstructor_IdAndStatus(
+            UUID instructorId,
+            LiveClassStatus status,
+            Pageable pageable
+    );
+
+    Page<LiveClass> findByInstructor_IdAndTitleContainingIgnoreCase(
+            UUID instructorId,
+            String title,
+            Pageable pageable
+    );
+
+    Page<LiveClass> findByInstructor_IdAndStatusAndTitleContainingIgnoreCase(
+            UUID instructorId,
+            LiveClassStatus status,
+            String title,
+            Pageable pageable
+    );
+
     Page<LiveClass> findByStatus(
             LiveClassStatus status,
             Pageable pageable

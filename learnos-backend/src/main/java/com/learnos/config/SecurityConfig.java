@@ -5,9 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,22 +27,10 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final CustomUserDetailsService userDetailsService;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager() {
-        DaoAuthenticationProvider provider =
-                new DaoAuthenticationProvider();
-
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder());
-
-        return new ProviderManager(provider);
     }
 
     @Bean
@@ -54,17 +39,11 @@ public class SecurityConfig {
     ) throws Exception {
 
         http
+                .csrf(AbstractHttpConfigurer::disable)
+
                 .cors(cors ->
                         cors.configurationSource(
                                 corsConfigurationSource()
-                        )
-                )
-
-                .csrf(AbstractHttpConfigurer::disable)
-
-                .headers(headers ->
-                        headers.frameOptions(
-                                frameOptions -> frameOptions.disable()
                         )
                 )
 
@@ -75,7 +54,6 @@ public class SecurityConfig {
                 )
 
                 .authorizeHttpRequests(auth -> auth
-
                         .requestMatchers(
                                 "/auth/**"
                         ).permitAll()
@@ -85,8 +63,8 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .requestMatchers(
-                                HttpMethod.GET,
-                                "/api/v1/certificates/verify/**"
+                                HttpMethod.POST,
+                                "/enquiries"
                         ).permitAll()
 
                         .requestMatchers(
@@ -98,10 +76,6 @@ public class SecurityConfig {
                                 HttpMethod.OPTIONS,
                                 "/**"
                         ).permitAll()
-
-                        .requestMatchers(
-                                "/api/v1/**"
-                        ).authenticated()
 
                         .anyRequest()
                         .authenticated()
@@ -117,39 +91,42 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration config =
+        CorsConfiguration configuration =
                 new CorsConfiguration();
 
-        config.setAllowedOrigins(
-                List.of(
-                        "http://localhost:4200",
-                        "http://127.0.0.1:4200"
-                )
-        );
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:4200",
+                "http://localhost:4201"
+        ));
 
-        config.setAllowedMethods(
-                List.of(
-                        "GET",
-                        "POST",
-                        "PUT",
-                        "PATCH",
-                        "DELETE",
-                        "OPTIONS"
-                )
-        );
+        configuration.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
 
-        config.setAllowedHeaders(
-                List.of("*")
-        );
+        configuration.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "Accept",
+                "Origin"
+        ));
 
-        config.setAllowCredentials(true);
+        configuration.setExposedHeaders(List.of(
+                "Authorization"
+        ));
+
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration(
                 "/**",
-                config
+                configuration
         );
 
         return source;

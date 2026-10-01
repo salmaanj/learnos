@@ -15,13 +15,15 @@ import java.util.Locale;
 
 @Service
 @RequiredArgsConstructor
-public class CustomUserDetailsService implements UserDetailsService {
+public class CustomUserDetailsService
+        implements UserDetailsService {
 
     private final UserRepository userRepository;
 
     @Override
-    public UserDetails loadUserByUsername(String username)
-            throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(
+            String username
+    ) throws UsernameNotFoundException {
 
         String email = username
                 .toLowerCase(Locale.ROOT)
@@ -31,7 +33,8 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .findByEmail(email)
                 .orElseThrow(
                         () -> new UsernameNotFoundException(
-                                "User not found: " + username
+                                "User not found: "
+                                        + username
                         )
                 );
 
@@ -39,18 +42,20 @@ public class CustomUserDetailsService implements UserDetailsService {
                 new ArrayList<>();
 
         if (user.getRole() != null) {
+            String role =
+                    user.getRole()
+                            .name()
+                            .trim()
+                            .toUpperCase(Locale.ROOT)
+                            .replace('-', '_')
+                            .replace(' ', '_');
+
             authorities.add(
                     new SimpleGrantedAuthority(
-                            "ROLE_" + user.getRole().name()
+                            "ROLE_" + role
                     )
             );
         }
-
-        /*
-         * Goutham needs to pass the existing controller checks.
-         * Add the permissions required by the content-manager account.
-         */
-
 
         return org.springframework.security.core.userdetails.User
                 .builder()

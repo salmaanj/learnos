@@ -1,7 +1,19 @@
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { Observable, tap } from 'rxjs';
-import { environment } from '../../environments/environment';
+import {
+  Injectable
+} from '@angular/core';
+
+import {
+  HttpClient
+} from '@angular/common/http';
+
+import {
+  Observable,
+  tap
+} from 'rxjs';
+
+import {
+  environment
+} from '../../environments/environment';
 
 export interface LoginRequest {
   email: string;
@@ -53,13 +65,20 @@ export interface AuthData {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly baseUrl = environment.apiUrl;
+
+  private readonly baseUrl =
+    environment.apiUrl;
+
   private readonly apiBaseUrl =
     'http://localhost:8080/api/v1';
 
-  constructor(private http: HttpClient) {}
+  constructor(
+    private readonly http: HttpClient
+  ) {}
 
-  login(payload: LoginRequest): Observable<AuthData> {
+  login(
+    payload: LoginRequest
+  ): Observable<AuthData> {
     return this.http
       .post<AuthData>(
         `${this.baseUrl}/auth/login`,
@@ -78,9 +97,11 @@ export class AuthService {
             this.normalizeRole(user.role);
 
           user.role = role;
-          user.permissions = this.normalizePermissions(
-            user.permissions
-          );
+
+          user.permissions =
+            this.normalizePermissions(
+              user.permissions
+            );
 
           localStorage.setItem(
             'accessToken',
@@ -188,7 +209,9 @@ export class AuthService {
   }
 
   getAccessToken(): string {
-    return localStorage.getItem('accessToken') || '';
+    return localStorage.getItem(
+      'accessToken'
+    ) || '';
   }
 
   getCompanyName(): string {
@@ -248,16 +271,19 @@ export class AuthService {
       return {
         ...user,
         role: this.normalizeRole(user.role),
-        permissions: this.normalizePermissions(
-          user.permissions
-        )
+        permissions:
+          this.normalizePermissions(
+            user.permissions
+          )
       };
     } catch {
       return null;
     }
   }
 
-  hasPermission(permission: string): boolean {
+  hasPermission(
+    permission: string
+  ): boolean {
     const requestedPermission =
       permission.trim().toUpperCase();
 
@@ -265,10 +291,20 @@ export class AuthService {
       return false;
     }
 
+    if (this.isSuperAdmin()) {
+      return true;
+    }
+
+    if (
+      this.getUserRole() === 'ADMIN'
+    ) {
+      return true;
+    }
+
     return this.getCurrentUser()?.permissions
       ?.some(value =>
         value.trim().toUpperCase()
-          === requestedPermission
+        === requestedPermission
       )
       ?? false;
   }
@@ -303,9 +339,13 @@ export class AuthService {
     const role =
       this.getUserRole();
 
-    return role === 'SUPERADMIN'
+    return role === 'SUPER_ADMIN'
+      || role === 'SUPERADMIN'
+      || role === 'SUPER_ADMINISTRATOR'
       || role === 'SUPERADMINISTRATOR'
+      || role === 'SYSTEM_ADMIN'
       || role === 'SYSTEMADMIN'
+      || role === 'ROOT_ADMIN'
       || role === 'ROOTADMIN'
       || email === 'admin@blute.co.in'
       || fullName === 'super admin';
@@ -371,7 +411,9 @@ export class AuthService {
       : '/admin/dashboard';
   }
 
-  private normalizeRole(role: unknown): string {
+  private normalizeRole(
+    role: unknown
+  ): string {
     if (typeof role !== 'string') {
       return '';
     }
@@ -380,7 +422,7 @@ export class AuthService {
       .trim()
       .toUpperCase()
       .replace(/^ROLE_/, '')
-      .replace(/[\s_-]/g, '');
+      .replace(/[-\s]+/g, '_');
   }
 
   private normalizePermissions(
@@ -392,7 +434,9 @@ export class AuthService {
 
     return permissions
       .filter(
-        (permission): permission is string =>
+        (
+          permission
+        ): permission is string =>
           typeof permission === 'string'
       )
       .map(permission =>

@@ -50,10 +50,20 @@ public class LiveClassController {
             "status"
     );
 
+    private static final String LIVE_CLASS_AUTHORITIES =
+            "hasAnyAuthority(" +
+                    "'ADMIN'," +
+                    "'USER'," +
+                    "'TUTOR'," +
+                    "'ROLE_ADMIN'," +
+                    "'ROLE_USER'," +
+                    "'ROLE_TUTOR'" +
+                    ")";
+
     private final LiveClassService liveClassService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(LIVE_CLASS_AUTHORITIES)
     public ResponseEntity<ApiResponse<Page<LiveClassResponse>>> getLiveClasses(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) LiveClassStatus status,
@@ -63,12 +73,19 @@ public class LiveClassController {
             @RequestParam(defaultValue = "ASC") Sort.Direction direction,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        int safePage = Math.max(0, page);
-        int safeSize = Math.min(Math.max(1, size), 100);
+        int safePage =
+                Math.max(0, page);
 
-        String safeSortBy = ALLOWED_SORT_FIELDS.contains(sortBy)
-                ? sortBy
-                : "startAt";
+        int safeSize =
+                Math.min(
+                        Math.max(1, size),
+                        100
+                );
+
+        String safeSortBy =
+                ALLOWED_SORT_FIELDS.contains(sortBy)
+                        ? sortBy
+                        : "startAt";
 
         return ResponseEntity.ok(
                 ApiResponse.success(
@@ -78,7 +95,10 @@ public class LiveClassController {
                                 PageRequest.of(
                                         safePage,
                                         safeSize,
-                                        Sort.by(direction, safeSortBy)
+                                        Sort.by(
+                                                direction,
+                                                safeSortBy
+                                        )
                                 ),
                                 username(userDetails)
                         )
@@ -87,7 +107,7 @@ public class LiveClassController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(LIVE_CLASS_AUTHORITIES)
     public ResponseEntity<ApiResponse<LiveClassResponse>> getLiveClass(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserDetails userDetails
@@ -103,12 +123,13 @@ public class LiveClassController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(LIVE_CLASS_AUTHORITIES)
     public ResponseEntity<ApiResponse<LiveClassResponse>> createLiveClass(
             @Valid @RequestBody LiveClassRequest request,
             @AuthenticationPrincipal UserDetails userDetails
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
                 .body(
                         ApiResponse.success(
                                 liveClassService.createLiveClass(
@@ -121,7 +142,7 @@ public class LiveClassController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(LIVE_CLASS_AUTHORITIES)
     public ResponseEntity<ApiResponse<LiveClassResponse>> updateLiveClass(
             @PathVariable UUID id,
             @Valid @RequestBody LiveClassRequest request,
@@ -140,7 +161,7 @@ public class LiveClassController {
     }
 
     @PatchMapping("/{id}/status")
-    @PreAuthorize("hasAnyRole('ADMIN','USER','TUTOR')")
+    @PreAuthorize(LIVE_CLASS_AUTHORITIES)
     public ResponseEntity<ApiResponse<LiveClassResponse>> updateStatus(
             @PathVariable UUID id,
             @Valid @RequestBody LiveClassStatusRequest request,
@@ -158,7 +179,9 @@ public class LiveClassController {
         );
     }
 
-    private String username(UserDetails userDetails) {
+    private String username(
+            UserDetails userDetails
+    ) {
         return userDetails != null
                 ? userDetails.getUsername()
                 : null;

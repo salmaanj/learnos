@@ -1,0 +1,283 @@
+<div class="card enquiries-card">
+  <div class="enquiries-toolbar">
+    <div class="enquiries-heading">
+      <div class="enquiries-title">
+        Enquiries
+        <span>
+          ({{ filteredEnquiries.length }})
+        </span>
+      </div>
+
+      <div class="enquiries-subtitle">
+        Manage enquiries submitted from the LearnOS landing page.
+      </div>
+    </div>
+
+    <div class="enquiries-controls">
+      <input
+        type="search"
+        placeholder="Search enquiries..."
+        class="enquiry-search"
+        [(ngModel)]="searchTerm"
+        (ngModelChange)="onSearchChange()"
+      />
+
+      <select
+        class="enquiry-select"
+        [(ngModel)]="selectedStatus"
+        (ngModelChange)="onStatusChange()"
+      >
+        <option value="">
+          All statuses
+        </option>
+
+        <option
+          *ngFor="let status of statuses"
+          [value]="status"
+        >
+          {{ status }}
+        </option>
+      </select>
+
+      <button
+        type="button"
+        class="btn btn-outline"
+        (click)="loadEnquiries()"
+        [disabled]="loading"
+      >
+        {{ loading ? 'Loading...' : 'Refresh' }}
+      </button>
+    </div>
+  </div>
+
+  <div
+    *ngIf="loading"
+    class="table-state"
+  >
+    Loading enquiries...
+  </div>
+
+  <div
+    *ngIf="!loading && error"
+    class="table-error"
+  >
+    {{ error }}
+  </div>
+
+  <ng-container *ngIf="!loading">
+
+    <div
+      class="table-wrapper"
+      *ngIf="filteredEnquiries.length > 0"
+    >
+      <table class="tbl enquiries-table">
+        <thead>
+          <tr>
+            <th class="number-column">
+              #
+            </th>
+
+            <th>
+              Contact
+            </th>
+
+            <th>
+              Organization
+            </th>
+
+            <th>
+              Audience
+            </th>
+
+            <th>
+              Message
+            </th>
+
+            <th>
+              Status
+            </th>
+
+            <th>
+              Created
+            </th>
+
+            <th>
+              Actions
+            </th>
+          </tr>
+        </thead>
+
+        <tbody>
+          <ng-container
+            *ngFor="
+              let enquiry of filteredEnquiries;
+              let index = index;
+              trackBy: trackById
+            "
+          >
+            <tr
+              class="enquiry-row"
+              [class.expanded]="
+                expandedEnquiryId === enquiry.id
+              "
+              (click)="toggleExpanded(enquiry)"
+            >
+              <td class="number-column">
+                {{ index + 1 }}
+              </td>
+
+              <td class="contact-cell">
+                <b>
+                  {{ enquiry.name }}
+                </b>
+
+                <a
+                  [href]="'mailto:' + enquiry.email"
+                  (click)="$event.stopPropagation()"
+                >
+                  {{ enquiry.email }}
+                </a>
+
+                <a
+                  *ngIf="enquiry.phone"
+                  [href]="'tel:' + enquiry.phone"
+                  (click)="$event.stopPropagation()"
+                >
+                  {{ enquiry.phone }}
+                </a>
+              </td>
+
+              <td>
+                {{ enquiry.organization }}
+              </td>
+
+              <td>
+                <span
+                  class="audience-badge"
+                  [ngClass]="{
+                    'audience-business':
+                      enquiry.audience === 'business',
+
+                    'audience-government':
+                      enquiry.audience === 'government',
+
+                    'audience-university':
+                      enquiry.audience === 'university'
+                  }"
+                >
+                  {{ enquiry.audience }}
+                </span>
+              </td>
+
+              <td
+                class="message-cell"
+                [title]="enquiry.message"
+              >
+                {{ enquiry.message }}
+              </td>
+
+              <td>
+                <select
+                  class="enquiry-select status-select"
+                  [value]="enquiry.status"
+                  (click)="$event.stopPropagation()"
+                  (change)="
+                    updateStatus(
+                      enquiry,
+                      $any($event.target).value
+                    )
+                  "
+                >
+                  <option value="NEW">
+                    New
+                  </option>
+
+                  <option value="IN_PROGRESS">
+                    In Progress
+                  </option>
+
+                  <option value="RESOLVED">
+                    Resolved
+                  </option>
+
+                  <option value="CLOSED">
+                    Closed
+                  </option>
+                </select>
+              </td>
+
+              <td class="date-cell">
+                {{
+                  enquiry.createdAt
+                    | date:'MMM d, y, h:mm a'
+                }}
+              </td>
+
+              <td>
+                <button
+                  type="button"
+                  class="btn btn-danger-outline"
+                  (click)="
+                    $event.stopPropagation();
+                    deleteEnquiry(enquiry)
+                  "
+                >
+                  Delete
+                </button>
+              </td>
+            </tr>
+
+            <tr
+              *ngIf="
+                expandedEnquiryId === enquiry.id
+              "
+              class="enquiry-detail-row"
+            >
+              <td
+                colspan="8"
+                class="enquiry-detail-cell"
+              >
+                <div class="enquiry-detail">
+                  <div
+                    class="enquiry-detail-heading"
+                  >
+                    <span>
+                      Full message
+                    </span>
+
+                    <button
+                      type="button"
+                      class="close-detail"
+                      aria-label="Close message"
+                      (click)="
+                        $event.stopPropagation();
+                        toggleExpanded(enquiry)
+                      "
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <p>
+                    {{ enquiry.message }}
+                  </p>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+    </div>
+
+    <div
+      *ngIf="
+        !error
+        && filteredEnquiries.length === 0
+      "
+      class="table-empty"
+    >
+      No enquiries found.
+    </div>
+
+  </ng-container>
+</div>

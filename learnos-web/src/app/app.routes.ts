@@ -632,6 +632,17 @@ export const routes: Routes = [
           ).then(m => m.RolesPageComponent)
       },
       {
+        path: 'enquiries',
+        canActivate: [
+          pendingCompanyAdminGuard,
+          superAdminOnlyGuard
+        ],
+        loadComponent: () =>
+          import(
+            './features/admin/enquiries/enquiries'
+          ).then(m => m.Enquiries)
+      },
+      {
         path: '',
         redirectTo: 'dashboard',
         pathMatch: 'full'

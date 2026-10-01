@@ -802,17 +802,39 @@ export class CourseContent implements OnInit {
       return;
     }
 
+    const streamingUrl = String(
+      this.lessonForm.value.streamingUrl || ''
+    ).trim();
+
+    const contentUrl = String(
+      this.lessonForm.value.contentUrl || ''
+    ).trim();
+
+    if (
+      lessonType === 'VIDEO' &&
+      streamingUrl &&
+      !this.isValidHttpUrl(streamingUrl)
+    ) {
+      this.error =
+        'Enter a valid video URL beginning with http:// or https://.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const hasVideoUrl =
+      lessonType === 'VIDEO' &&
+      streamingUrl.length > 0;
+
     if (
       this.lessonSource === 'UPLOAD' &&
       lessonType !== 'TEXT' &&
       !this.selectedLessonFile &&
       !this.currentLessonFileName &&
-      !String(
-        this.lessonForm.value.contentUrl || ''
-      ).trim()
+      !contentUrl &&
+      !hasVideoUrl
     ) {
       this.error =
-        `Add a ${lessonType} file before saving this lesson.`;
+        `Add a ${lessonType} file or paste a video URL before saving this lesson.`;
       this.cdr.detectChanges();
       return;
     }
@@ -1056,6 +1078,19 @@ export class CourseContent implements OnInit {
     }
 
     return null;
+  }
+
+  private isValidHttpUrl(value: string): boolean {
+    try {
+      const url = new URL(value);
+
+      return (
+        url.protocol === 'http:' ||
+        url.protocol === 'https:'
+      );
+    } catch {
+      return false;
+    }
   }
 
   get mf() {

@@ -142,8 +142,35 @@
             </button>
 
             <ng-container *ngIf="selectedLesson.type === 'VIDEO'">
-              <video #videoPlayer *ngIf="lessonUrl(selectedLesson)" [src]="lessonUrl(selectedLesson)" controls class="video-viewer" (loadedmetadata)="onMediaLoaded(videoPlayer)" (timeupdate)="onMediaTimeUpdate(videoPlayer)" (pause)="onMediaPause(videoPlayer)" (ended)="onMediaEnded(videoPlayer)"></video>
-              <div class="document-empty" *ngIf="!lessonUrl(selectedLesson)">Video content is not available.</div>
+              <ng-container *ngIf="isYouTubeLesson(selectedLesson); else hostedVideo">
+              <iframe
+                class="video-viewer youtube-viewer"
+                [src]="youtubeEmbedUrl(selectedLesson)"
+                title="Lesson video"
+                frameborder="0"
+                allow="fullscreen; autoplay; encrypted-media; picture-in-picture"
+                allowfullscreen>
+              </iframe>
+              </ng-container>
+
+              <ng-template #hostedVideo>
+                <video
+                  #videoPlayer
+                  *ngIf="lessonUrl(selectedLesson)"
+                  [src]="lessonUrl(selectedLesson)"
+                  controls
+                  playsinline
+                  class="video-viewer"
+                  (loadedmetadata)="onMediaLoaded(videoPlayer)"
+                  (timeupdate)="onMediaTimeUpdate(videoPlayer)"
+                  (pause)="onMediaPause(videoPlayer)"
+                  (ended)="onMediaEnded(videoPlayer)">
+                </video>
+
+                <div class="document-empty" *ngIf="!lessonUrl(selectedLesson)">
+                  Video content is not available.
+                </div>
+              </ng-template>
             </ng-container>
 
             <ng-container *ngIf="selectedLesson.type === 'AUDIO'">
