@@ -1,9 +1,12 @@
 package com.learnos.ai.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+
+import java.util.UUID;
 
 public record AiChatRequest(
-        @NotBlank String message,
-        String lessonContext
+        @NotNull UUID lessonId,
+        @NotBlank String message
 ) {
 }

@@ -159,6 +159,22 @@ public class LessonService {
         return mapToResponseForUser(lesson, getCurrentUserOrNull());
     }
 
+    @Transactional(readOnly = true)
+    public Lesson getAuthorizedLessonForAi(String userEmail, UUID lessonId) {
+        User user = getUser(userEmail);
+
+        Lesson lesson = lessonRepository.findById(lessonId)
+                .orElseThrow(() -> new RuntimeException("Lesson not found: " + lessonId));
+
+        assertLearnerCanAccessLesson(user, lesson);
+
+        if (!lesson.isPublished() && user.getRole() == Role.LEARNER) {
+            throw new RuntimeException("This lesson is not published.");
+        }
+
+        return lesson;
+    }
+
     public record LessonDownload(Resource resource, String fileName, String contentType) {}
 
     @Transactional(readOnly = true)
