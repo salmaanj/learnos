@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 
 import '../../../core/constants/api_constants.dart';
@@ -5,6 +7,7 @@ import '../../../core/network/api_client.dart';
 import '../models/course_model.dart';
 import '../models/lesson_model.dart';
 import '../models/module_model.dart';
+import '../repositories/course_offline_repository.dart';
 
 class LessonProgressModel {
   final String lessonId;
@@ -110,7 +113,9 @@ class CourseRatingModel {
 
     return CourseRatingModel(
       courseId: (json['courseId'] ?? '').toString(),
-      averageRating: _clampRating(_toDouble(json['averageRating'])),
+      averageRating: _clampRating(
+        _toDouble(json['averageRating']),
+      ),
       ratingCount: _toInt(json['ratingCount']),
       myRating: parsedMyRating != null &&
               parsedMyRating >= 1 &&
@@ -140,13 +145,17 @@ class CoursePaymentOrderModel {
     required this.status,
   });
 
-  factory CoursePaymentOrderModel.fromJson(Map<String, dynamic> json) {
+  factory CoursePaymentOrderModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return CoursePaymentOrderModel(
       paymentId: (json['paymentId'] ?? '').toString(),
       courseId: (json['courseId'] ?? '').toString(),
       keyId: (json['keyId'] ?? '').toString(),
       orderId: (json['orderId'] ?? '').toString(),
-      amountInPaise: _toInt(json['amountInPaise'] ?? json['amount']),
+      amountInPaise: _toInt(
+        json['amountInPaise'] ?? json['amount'],
+      ),
       currency: (json['currency'] ?? 'INR').toString(),
       status: (json['status'] ?? '').toString(),
     );
@@ -192,7 +201,9 @@ class PaymentHistoryRecordModel {
     this.createdAt,
   });
 
-  factory PaymentHistoryRecordModel.fromJson(Map<String, dynamic> json) {
+  factory PaymentHistoryRecordModel.fromJson(
+    Map<String, dynamic> json,
+  ) {
     return PaymentHistoryRecordModel(
       id: (json['id'] ?? '').toString(),
       paymentType: (json['paymentType'] ?? '').toString(),
@@ -216,7 +227,13 @@ class PaymentHistoryRecordModel {
 }
 
 class CourseService {
+  CourseService({
+    CourseOfflineRepository? offlineRepository,
+  }) : _offlineRepository =
+            offlineRepository ?? CourseOfflineRepository();
+
   final _dio = ApiClient().dio;
+  final CourseOfflineRepository _offlineRepository;
 
   String get _apiBaseUrl => ApiConstants.baseUrl;
 
@@ -267,8 +284,32 @@ class CourseService {
   }
 
   Future<CourseModel> getCourseById(String id) async {
-    final response = await _dio.get('${ApiConstants.courses}/$id');
-    return CourseModel.fromJson(response.data['data']);
+    try {
+      final response = await _dio.get(
+        '${ApiConstants.courses}/$id',
+      );
+      final course = CourseModel.fromJson(response.data['data']);
+
+      await _offlineRepository.cacheCourse(course);
+
+      return course;
+    } on DioException catch (e) {
+      final cachedCourse = await _offlineRepository.getCachedCourseById(id);
+
+      if (cachedCourse != null) {
+        return cachedCourse;
+      }
+
+      throw Exception(_extractDioError(e));
+    } catch (e) {
+      final cachedCourse = await _offlineRepository.getCachedCourseById(id);
+
+      if (cachedCourse != null) {
+        return cachedCourse;
+      }
+
+      throw Exception(e.toString());
+    }
   }
 
   Future<CourseRatingModel> getCourseRating(String courseId) async {
@@ -317,7 +358,9 @@ class CourseService {
 
   Future<List<CourseModel>> getFeaturedCourses() async {
     try {
-      final response = await _dio.get('${ApiConstants.courses}/featured');
+      final response = await _dio.get(
+        '${ApiConstants.courses}/featured',
+      );
       final data = response.data['data'];
       final List list = data is List ? data : [];
       return list.map((item) => CourseModel.fromJson(item)).toList();
@@ -380,8 +423,12 @@ class CourseService {
       final response = await _dio.get('/payment-history/my');
       final body = response.data;
       dynamic data = body;
-      if (body is Map && body['data'] != null) data = body['data'];
-      if (data is! List) return [];
+      if (body is Map && body['data'] != null) {
+        data = body['data'];
+      }
+      if (data is! List) {
+        return [];
+      }
 
       return data
           .whereType<Map>()
@@ -396,58 +443,62 @@ class CourseService {
     }
   }
 
-  Future<List<ModuleModel>> getCourseContent(String courseId) async {
-    final modulesResponse = await _dio.get(
-      '${ApiConstants.courses}/$courseId/modules',
-    );
-    final lessonsResponse = await _dio.get(
-      '${ApiConstants.courses}/$courseId/lessons',
-    );
+  Future<List<ModuleModel>> getCourseContent(
+    String courseId,
+  ) async {
+    try {
+      final modulesResponse = await _dio.get(
+        '${ApiConstants.courses}/$courseId/modules',
+      );
+      final lessonsResponse = await _dio.get(
+        '${ApiConstants.courses}/$courseId/lessons',
+      );
 
-    final modulesBody = modulesResponse.data;
-    final lessonsBody = lessonsResponse.data;
-    final modulesData = modulesBody is Map && modulesBody['data'] != null
-        ? modulesBody['data']
-        : modulesBody;
-    final lessonsData = lessonsBody is Map && lessonsBody['data'] != null
-        ? lessonsBody['data']
-        : lessonsBody;
+      final modules = _parseModules(modulesResponse.data);
+      final lessons = _parseLessons(lessonsResponse.data);
 
-    final modules = modulesData is List
-        ? modulesData
-            .whereType<Map>()
-            .map(
-              (item) => ModuleModel.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
+      modules.sort(
+        (left, right) => left.displayOrder.compareTo(right.displayOrder),
+      );
+
+      final content = modules.map((module) {
+        final moduleLessons = lessons
+            .where((lesson) => lesson.moduleId == module.id)
             .toList()
-        : <ModuleModel>[];
+          ..sort(
+            (left, right) => left.order.compareTo(right.order),
+          );
 
-    final lessons = lessonsData is List
-        ? lessonsData
-            .whereType<Map>()
-            .map(
-              (item) => LessonModel.fromJson(
-                Map<String, dynamic>.from(item),
-              ),
-            )
-            .where((lesson) => lesson.isPublished)
-            .toList()
-        : <LessonModel>[];
+        return module.copyWith(lessons: moduleLessons);
+      }).toList();
 
-    modules.sort(
-      (left, right) => left.displayOrder.compareTo(right.displayOrder),
-    );
+      await _offlineRepository.cacheCourseContent(
+        courseId: courseId,
+        modules: content,
+      );
 
-    return modules.map((module) {
-      final moduleLessons = lessons
-          .where((lesson) => lesson.moduleId == module.id)
-          .toList()
-        ..sort((left, right) => left.order.compareTo(right.order));
+      return content;
+    } on DioException catch (e) {
+      final cached = await _offlineRepository.getCachedCourseContent(
+        courseId,
+      );
 
-      return module.copyWith(lessons: moduleLessons);
-    }).toList();
+      if (cached.modules.isNotEmpty) {
+        return cached.modules;
+      }
+
+      throw Exception(_extractDioError(e));
+    } catch (e) {
+      final cached = await _offlineRepository.getCachedCourseContent(
+        courseId,
+      );
+
+      if (cached.modules.isNotEmpty) {
+        return cached.modules;
+      }
+
+      throw Exception(e.toString());
+    }
   }
 
   Future<void> enrollInCourse(String courseId) async {
@@ -455,38 +506,46 @@ class CourseService {
       await _dio.post(
         '${ApiConstants.courses}/$courseId/enroll',
         data: {},
-        options: Options(headers: {'Content-Type': 'application/json'}),
+        options: Options(
+          headers: {'Content-Type': 'application/json'},
+        ),
       );
     } on DioException catch (e) {
       throw Exception(_extractDioError(e));
     }
   }
 
-  Future<List<LessonModel>> getLessons(String courseId) async {
+  Future<List<LessonModel>> getLessons(
+    String courseId,
+  ) async {
     try {
       final response = await _dio.get(
         '${ApiConstants.courses}/$courseId/lessons',
       );
-      final body = response.data;
-      dynamic data = body;
 
-      if (body is Map && body['data'] != null) data = body['data'];
-      if (data is Map && data['content'] is List) data = data['content'];
-      if (data is Map && data['lessons'] is List) data = data['lessons'];
-      if (data is! List) return [];
+      final lessons = _parseLessons(response.data);
 
-      return data
-          .whereType<Map>()
-          .map(
-            (item) => LessonModel.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
-          )
-          .where((lesson) => lesson.isPublished)
-          .toList();
+      await _offlineRepository.cacheLessons(
+        courseId: courseId,
+        lessons: lessons,
+      );
+
+      return lessons;
     } on DioException catch (e) {
+      final cached = await _offlineRepository.getCachedLessons(courseId);
+
+      if (cached.lessons.isNotEmpty) {
+        return cached.lessons;
+      }
+
       throw Exception(_extractDioError(e));
     } catch (e) {
+      final cached = await _offlineRepository.getCachedLessons(courseId);
+
+      if (cached.lessons.isNotEmpty) {
+        return cached.lessons;
+      }
+
       throw Exception(e.toString());
     }
   }
@@ -501,13 +560,28 @@ class CourseService {
         filePath,
         options: Options(responseType: ResponseType.bytes),
       );
+
+      final downloadedFile = File(filePath);
+
+      if (!await downloadedFile.exists() ||
+          await downloadedFile.length() == 0) {
+        throw Exception('The lesson download was empty.');
+      }
+
+      await _offlineRepository.saveLocalLessonFile(
+        lessonId: lessonId,
+        localFilePath: filePath,
+      );
+
       return filePath;
     } on DioException catch (e) {
       throw Exception(_extractDioError(e));
     }
   }
 
-  Future<CourseProgressModel> getCourseProgress(String courseId) async {
+  Future<CourseProgressModel> getCourseProgress(
+    String courseId,
+  ) async {
     try {
       final response = await _dio.get(
         '$_apiBaseUrl/lessons/progress/course/$courseId',
@@ -548,15 +622,27 @@ class CourseService {
           ? body['data']
           : body;
 
-      return LessonProgressModel.fromJson(
+      final progress = LessonProgressModel.fromJson(
         Map<String, dynamic>.from(data),
       );
+
+      await _offlineRepository.saveLocalLessonProgress(
+        lessonId: lessonId,
+        completed: progress.completed,
+        watchedSeconds: progress.watchedSeconds,
+        progressPercent: progress.progressPercent,
+        durationSeconds: progress.durationSeconds,
+      );
+
+      return progress;
     } on DioException catch (e) {
       throw Exception(_extractDioError(e));
     }
   }
 
-  Future<LessonProgressModel> markLessonCompleted(String lessonId) async {
+  Future<LessonProgressModel> markLessonCompleted(
+    String lessonId,
+  ) async {
     try {
       final response = await _dio.post(
         '$_apiBaseUrl/lessons/$lessonId/complete',
@@ -567,20 +653,78 @@ class CourseService {
           ? body['data']
           : body;
 
-      return LessonProgressModel.fromJson(
+      final progress = LessonProgressModel.fromJson(
         Map<String, dynamic>.from(data),
       );
+
+      await _offlineRepository.saveLocalLessonProgress(
+        lessonId: lessonId,
+        completed: progress.completed,
+        watchedSeconds: progress.watchedSeconds,
+        progressPercent: progress.progressPercent,
+        durationSeconds: progress.durationSeconds,
+      );
+
+      return progress;
     } on DioException catch (e) {
       throw Exception(_extractDioError(e));
     }
   }
 
-  Future<List<CourseModel>> getCoursesByCategory(String categoryId) async {
+  Future<List<CourseModel>> getCoursesByCategory(
+    String categoryId,
+  ) async {
     final response = await _dio.get(
       '${ApiConstants.courses}/category/$categoryId',
     );
     final List content = response.data['data']['content'];
     return content.map((item) => CourseModel.fromJson(item)).toList();
+  }
+
+  List<ModuleModel> _parseModules(dynamic body) {
+    final data = body is Map && body['data'] != null
+        ? body['data']
+        : body;
+
+    if (data is! List) {
+      return [];
+    }
+
+    return data
+        .whereType<Map>()
+        .map(
+          (item) => ModuleModel.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .toList();
+  }
+
+  List<LessonModel> _parseLessons(dynamic body) {
+    dynamic data = body;
+
+    if (body is Map && body['data'] != null) {
+      data = body['data'];
+    }
+    if (data is Map && data['content'] is List) {
+      data = data['content'];
+    }
+    if (data is Map && data['lessons'] is List) {
+      data = data['lessons'];
+    }
+    if (data is! List) {
+      return [];
+    }
+
+    return data
+        .whereType<Map>()
+        .map(
+          (item) => LessonModel.fromJson(
+            Map<String, dynamic>.from(item),
+          ),
+        )
+        .where((lesson) => lesson.isPublished)
+        .toList();
   }
 
   String _extractDioError(DioException e) {
@@ -589,7 +733,8 @@ class CourseService {
 
     if (body is Map) {
       final message = body['message'] ?? body['error'];
-      if (message != null && message.toString().trim().isNotEmpty) {
+      if (message != null &&
+          message.toString().trim().isNotEmpty) {
         return message.toString();
       }
     }

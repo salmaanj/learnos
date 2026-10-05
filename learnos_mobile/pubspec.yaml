@@ -63,6 +63,7 @@ dependencies:
   flutter_svg: ^2.0.10+1
   drift: ^2.32.1
   drift_flutter: ^0.3.0
+  path: ^1.9.1
 
 dev_dependencies:
   flutter_test:

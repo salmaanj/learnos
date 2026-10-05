@@ -9,6 +9,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { HttpClient } from '@angular/common/http';
+import { Subscription } from 'rxjs';
 
 import {
   CoursePaymentOrderResponse,
@@ -105,6 +106,16 @@ export class LearnCourseDetail implements OnInit, OnDestroy {
   downloadingLessonId = '';
   documentFullscreen = false;
 
+  // PDF/slides preview. The file is fetched as a Blob and shown from a blob: URL,
+  // because a blob: URL has no response headers and so is not subject to the
+  // backend's X-Frame-Options / frame-ancestors rules.
+  documentPreviewUrl: SafeResourceUrl | null = null;
+  documentPreviewLoading = false;
+  documentPreviewError = '';
+  private documentObjectUrl: string | null = null;
+  private documentPreviewLessonId = '';
+  private documentPreviewSub: Subscription | null = null;
+
   private activeMedia: HTMLMediaElement | null = null;
   private activeMediaLessonId = '';
   private lastSavedPositionSeconds = 0;
@@ -131,6 +142,7 @@ export class LearnCourseDetail implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.saveSelectedLessonProgress(true);
+    this.clearDocumentPreview();
   }
 
   toggleDocumentFullscreen(element: HTMLElement): void {
@@ -277,7 +289,70 @@ private cleanYouTubeVideoId(
   return /^[A-Za-z0-9_-]{11}$/.test(id)
     ? id
     : null;
-}  isDocumentLesson(lesson: LessonItem): boolean { return lesson.type === 'PDF' || lesson.type === 'SLIDES'; }
+}
+  /** Loads the PDF/slides for the given lesson into documentPreviewUrl. Safe to call repeatedly. */
+  private loadDocumentPreview(lesson: LessonItem | null): void {
+    if (!lesson || !this.isDocumentLesson(lesson)) {
+      this.clearDocumentPreview();
+      return;
+    }
+    if (this.documentPreviewLessonId === lesson.id && (this.documentPreviewUrl || this.documentPreviewLoading)) {
+      return;
+    }
+
+    this.clearDocumentPreview();
+
+    const url = this.documentUrl(lesson);
+    if (!url) {
+      this.documentPreviewError = 'No document is attached to this lesson.';
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const lessonId = lesson.id;
+    this.documentPreviewLessonId = lessonId;
+    this.documentPreviewLoading = true;
+    this.cdr.detectChanges();
+
+    this.documentPreviewSub = this.http.get(url, { responseType: 'blob' }).subscribe({
+      next: (blob: Blob) => {
+        // Ignore a response that arrives after the learner moved to another lesson.
+        if (this.documentPreviewLessonId !== lessonId) return;
+        const pdf = new Blob([blob], { type: 'application/pdf' });
+        this.documentObjectUrl = window.URL.createObjectURL(pdf);
+        this.documentPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.documentObjectUrl);
+        this.documentPreviewLoading = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        if (this.documentPreviewLessonId !== lessonId) return;
+        this.documentPreviewLoading = false;
+        this.documentPreviewError = 'Could not load this document. Please try again.';
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  retryDocumentPreview(): void {
+    const lesson = this.selectedLesson;
+    this.clearDocumentPreview();
+    this.loadDocumentPreview(lesson);
+  }
+
+  private clearDocumentPreview(): void {
+    this.documentPreviewSub?.unsubscribe();
+    this.documentPreviewSub = null;
+    if (this.documentObjectUrl) {
+      window.URL.revokeObjectURL(this.documentObjectUrl);
+      this.documentObjectUrl = null;
+    }
+    this.documentPreviewUrl = null;
+    this.documentPreviewLoading = false;
+    this.documentPreviewError = '';
+    this.documentPreviewLessonId = '';
+  }
+
+  isDocumentLesson(lesson: LessonItem): boolean { return lesson.type === 'PDF' || lesson.type === 'SLIDES'; }
   isManualCompletionLesson(lesson: LessonItem): boolean { return ['PDF', 'SLIDES', 'TEXT'].includes(lesson.type); }
 
   downloadSelectedLesson(): void {
@@ -414,24 +489,7 @@ private cleanYouTubeVideoId(
         this.service.getLessons(this.courseId).subscribe({
           next: (lesRes: any) => {
             const lessonsRaw = Array.isArray(lesRes?.data) ? lesRes.data : Array.isArray(lesRes) ? lesRes : [];
-            console.log('COURSE DETAIL LESSONS RESPONSE:', lesRes);
-console.table(
-  lessonsRaw.map((lesson: any) => ({
-    title: lesson.title,
-    id: lesson.id,
-    downloadable: lesson.downloadable,
-    isDownloadable: lesson.isDownloadable,
-    moduleId: lesson.moduleId
-  }))
-);
-            console.table(
-              lessonsRaw.map((lesson: any) => ({
-                title: lesson.title,
-                downloadable: lesson.downloadable,
-                isDownloadable: lesson.isDownloadable,
-                moduleId: lesson.moduleId
-              }))
-            );
+
             this.modules = modulesRaw.sort((a: any, b: any) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0)).map((module: any, moduleIndex: number): ModuleItem => ({
               id: String(module.id),
               title: module.title || 'Untitled module',
@@ -532,6 +590,7 @@ console.table(
     found.module.expanded = true;
     this.selectedLesson = found.lesson;
     this.lastSavedPositionSeconds = found.lesson.watchedSeconds || 0;
+    this.loadDocumentPreview(found.lesson);
   }
   private openFirstAvailableLesson(): void {
   if (this.selectedLesson) {
@@ -556,6 +615,7 @@ console.table(
   this.selectedLesson = found.lesson;
   this.lastSavedPositionSeconds =
     found.lesson.watchedSeconds || 0;
+  this.loadDocumentPreview(found.lesson);
 }
 
   private findLesson(lessonId: string): { lesson: LessonItem; module: ModuleItem } | null {
@@ -591,6 +651,7 @@ console.table(
     this.activeMediaLessonId = '';
     this.pendingProgressSave = null;
     this.lastSavedPositionSeconds = lesson.watchedSeconds || 0;
+    this.loadDocumentPreview(lesson);
     this.cdr.detectChanges();
   }
 

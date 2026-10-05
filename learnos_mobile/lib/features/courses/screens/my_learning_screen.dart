@@ -13,16 +13,21 @@ class MyLearningScreen extends StatefulWidget {
   const MyLearningScreen({super.key});
 
   @override
-  State<MyLearningScreen> createState() => _MyLearningScreenState();
+  State<MyLearningScreen> createState() =>
+      _MyLearningScreenState();
 }
 
-class _MyLearningScreenState extends State<MyLearningScreen> {
+class _MyLearningScreenState
+    extends State<MyLearningScreen> {
   @override
   void initState() {
     super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CourseProvider>().loadMyCourses();
+    WidgetsBinding.instance
+        .addPostFrameCallback((_) {
+      context
+          .read<CourseProvider>()
+          .loadMyCourses();
     });
   }
 
@@ -30,7 +35,8 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const MyCertificatesScreen(),
+        builder: (_) =>
+            const MyCertificatesScreen(),
       ),
     );
   }
@@ -43,10 +49,16 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
       ),
       child: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 20, 16, 16),
+              padding: const EdgeInsets.fromLTRB(
+                24,
+                20,
+                16,
+                16,
+              ),
               child: Row(
                 children: [
                   Expanded(
@@ -59,50 +71,100 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
                     tooltip: 'My Certificates',
                     onPressed: _openCertificates,
                     icon: const Icon(
-                      Icons.workspace_premium_outlined,
+                      Icons
+                          .workspace_premium_outlined,
                       color: AppColors.warning,
                     ),
                   ),
                 ],
               ),
             ),
+
+            Consumer<CourseProvider>(
+              builder: (
+                context,
+                provider,
+                _,
+              ) {
+                if (!provider
+                    .usingOfflineMyCourses) {
+                  return const SizedBox.shrink();
+                }
+
+                return const _OfflineBanner();
+              },
+            ),
+
             Expanded(
               child: Consumer<CourseProvider>(
-                builder: (context, provider, _) {
-                  if (provider.loadingMyCourses) {
-                    return const Center(child: AppLoader());
-                  }
-
-                  if (provider.myCoursesError != null) {
-                    return _ErrorState(
-                      message: provider.myCoursesError!,
-                      onRetry: () => provider.loadMyCourses(),
+                builder: (
+                  context,
+                  provider,
+                  _,
+                ) {
+                  if (provider
+                      .loadingMyCourses) {
+                    return const Center(
+                      child: AppLoader(),
                     );
                   }
 
-                  if (provider.myCourses.isEmpty) {
+                  if (provider
+                          .myCoursesError !=
+                      null) {
+                    return _ErrorState(
+                      message:
+                          provider.myCoursesError!,
+                      onRetry: () => provider
+                          .loadMyCourses(),
+                    );
+                  }
+
+                  if (provider
+                      .myCourses
+                      .isEmpty) {
                     return const _EmptyState();
                   }
 
                   return RefreshIndicator(
                     color: AppColors.primary,
-                    onRefresh: () => provider.loadMyCourses(),
+                    onRefresh: () => provider
+                        .loadMyCourses(),
                     child: ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                      itemCount: provider.myCourses.length,
-                      separatorBuilder: (_, __) =>
-                      const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final course = provider.myCourses[index];
+                      padding:
+                          const EdgeInsets.fromLTRB(
+                        24,
+                        0,
+                        24,
+                        24,
+                      ),
+                      itemCount: provider
+                          .myCourses
+                          .length,
+                      separatorBuilder: (
+                        _,
+                        __,
+                      ) =>
+                          const SizedBox(
+                        height: 12,
+                      ),
+                      itemBuilder: (
+                        context,
+                        index,
+                      ) {
+                        final course =
+                            provider.myCourses[
+                                index];
 
                         return _CourseCard(
                           course: course,
                           onTap: () => context.push(
                             '/course/${course.id}?from=mylearning',
                           ),
-                          onOpenCertificate: course.progress >= 1.0
-                              ? _openCertificates
-                              : null,
+                          onOpenCertificate:
+                              course.progress >= 1.0
+                                  ? _openCertificates
+                                  : null,
                         );
                       },
                     ),
@@ -117,7 +179,63 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
   }
 }
 
-class _CourseCard extends StatelessWidget {
+class _OfflineBanner
+    extends StatelessWidget {
+  const _OfflineBanner();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(
+        24,
+        0,
+        24,
+        12,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: 10,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withOpacity(
+          0.12,
+        ),
+        borderRadius: BorderRadius.circular(
+          10,
+        ),
+        border: Border.all(
+          color: AppColors.warning.withOpacity(
+            0.35,
+          ),
+        ),
+      ),
+      child: const Row(
+        children: [
+          Icon(
+            Icons.cloud_off_rounded,
+            color: AppColors.warning,
+            size: 20,
+          ),
+          SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'You are viewing cached courses offline.',
+              style: TextStyle(
+                color: AppColors.warning,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CourseCard
+    extends StatelessWidget {
   final CourseModel course;
   final VoidCallback onTap;
   final VoidCallback? onOpenCertificate;
@@ -130,7 +248,8 @@ class _CourseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final completed = course.progress >= 1.0;
+    final completed =
+        course.progress >= 1.0;
 
     return GestureDetector(
       onTap: onTap,
@@ -138,8 +257,11 @@ class _CourseCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.divider),
+          borderRadius:
+              BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.divider,
+          ),
         ),
         child: Column(
           children: [
@@ -150,15 +272,19 @@ class _CourseCard extends StatelessWidget {
                   height: 56,
                   decoration: BoxDecoration(
                     color: completed
-                        ? AppColors.success.withOpacity(0.12)
+                        ? AppColors.success
+                            .withOpacity(0.12)
                         : AppColors.primarySurface,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius:
+                        BorderRadius.circular(10),
                   ),
                   child: Center(
                     child: Icon(
                       completed
-                          ? Icons.check_circle_rounded
-                          : Icons.play_circle_rounded,
+                          ? Icons
+                              .check_circle_rounded
+                          : Icons
+                              .play_circle_rounded,
                       color: completed
                           ? AppColors.success
                           : AppColors.primary,
@@ -169,22 +295,28 @@ class _CourseCard extends StatelessWidget {
                 const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
                     children: [
                       Text(
                         course.title,
                         style: AppTextStyles.label,
                         maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        overflow:
+                            TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          _Tag(course.level, AppColors.warning),
+                          _Tag(
+                            course.level,
+                            AppColors.warning,
+                          ),
                           const SizedBox(width: 6),
                           Flexible(
                             child: _Tag(
-                              course.categoryName ?? 'Course',
+                              course.categoryName
+                                  ?? 'Course',
                               AppColors.primary,
                             ),
                           ),
@@ -209,16 +341,19 @@ class _CourseCard extends StatelessWidget {
               const SizedBox(height: 10),
               InkWell(
                 onTap: onOpenCertificate,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius:
+                    BorderRadius.circular(10),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(
+                  padding:
+                      const EdgeInsets.symmetric(
                     horizontal: 4,
                     vertical: 4,
                   ),
                   child: Row(
                     children: [
                       const Icon(
-                        Icons.workspace_premium_rounded,
+                        Icons
+                            .workspace_premium_rounded,
                         color: AppColors.success,
                         size: 20,
                       ),
@@ -226,9 +361,13 @@ class _CourseCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           'Certificate available',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: AppColors.success,
-                            fontWeight: FontWeight.w700,
+                          style: AppTextStyles
+                              .bodySmall
+                              .copyWith(
+                            color:
+                                AppColors.success,
+                            fontWeight:
+                                FontWeight.w700,
                           ),
                         ),
                       ),
@@ -253,7 +392,10 @@ class _Tag extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _Tag(this.label, this.color);
+  const _Tag(
+    this.label,
+    this.color,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -264,7 +406,8 @@ class _Tag extends StatelessWidget {
       ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius:
+            BorderRadius.circular(6),
       ),
       child: Text(
         label,
@@ -279,14 +422,16 @@ class _Tag extends StatelessWidget {
   }
 }
 
-class _EmptyState extends StatelessWidget {
+class _EmptyState
+    extends StatelessWidget {
   const _EmptyState();
 
   @override
   Widget build(BuildContext context) {
     return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize:
+            MainAxisSize.min,
         children: [
           const Icon(
             Icons.play_lesson_rounded,
@@ -301,8 +446,10 @@ class _EmptyState extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             'Tap Explore to browse and enroll in courses.',
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+            style: AppTextStyles.bodySmall
+                .copyWith(
+              color:
+                  AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -312,7 +459,8 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _ErrorState extends StatelessWidget {
+class _ErrorState
+    extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
 
@@ -325,7 +473,8 @@ class _ErrorState extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Column(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize:
+            MainAxisSize.min,
         children: [
           const Icon(
             Icons.error_outline_rounded,
@@ -339,11 +488,16 @@ class _ErrorState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding:
+                const EdgeInsets.symmetric(
+              horizontal: 32,
+            ),
             child: Text(
               message,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+              style: AppTextStyles.bodySmall
+                  .copyWith(
+                color:
+                    AppColors.textSecondary,
               ),
               textAlign: TextAlign.center,
             ),
@@ -351,10 +505,13 @@ class _ErrorState extends StatelessWidget {
           const SizedBox(height: 20),
           ElevatedButton.icon(
             onPressed: onRetry,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(
+              Icons.refresh_rounded,
+            ),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor:
+                  AppColors.primary,
             ),
           ),
         ],

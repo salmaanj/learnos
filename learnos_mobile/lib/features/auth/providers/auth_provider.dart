@@ -42,13 +42,19 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> login(String email, String password) async {
+  Future<bool> login(
+    String email,
+    String password,
+  ) async {
     _status = AuthStatus.loading;
     _error = null;
     notifyListeners();
 
     try {
-      final response = await _authService.login(email, password);
+      final response = await _authService.login(
+        email,
+        password,
+      );
 
       _user = response.user;
       _status = AuthStatus.authenticated;
@@ -57,7 +63,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseLoginError(error);
       _status = AuthStatus.error;
 
       notifyListeners();
@@ -91,16 +97,13 @@ class AuthProvider extends ChangeNotifier {
       _pendingEmail = email.trim().toLowerCase();
       isForgotPasswordFlow = false;
 
-      // The current backend creates self-registered learners as:
-      // enabled=true and emailVerified=true.
-      // Therefore they can immediately sign in; no mobile OTP screen is needed.
       _status = AuthStatus.unauthenticated;
 
       notifyListeners();
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseRegistrationError(error);
       _status = AuthStatus.error;
 
       notifyListeners();
@@ -134,7 +137,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseGenericError(error);
       _status = AuthStatus.error;
 
       notifyListeners();
@@ -159,7 +162,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseGenericError(error);
       _status = AuthStatus.error;
 
       notifyListeners();
@@ -169,10 +172,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<bool> resetPassword(
-      String email,
-      String otp,
-      String newPassword,
-      ) async {
+    String email,
+    String otp,
+    String newPassword,
+  ) async {
     _status = AuthStatus.loading;
     _error = null;
     notifyListeners();
@@ -192,7 +195,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseGenericError(error);
       _status = AuthStatus.error;
 
       notifyListeners();
@@ -216,7 +219,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseGenericError(error);
       notifyListeners();
 
       return false;
@@ -243,7 +246,7 @@ class AuthProvider extends ChangeNotifier {
 
       return true;
     } catch (error) {
-      _error = _parseError(error);
+      _error = _parseGenericError(error);
       notifyListeners();
 
       return false;
@@ -282,24 +285,68 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _parseError(Object error) {
+  String _parseLoginError(Object error) {
     if (error is DioException) {
-      final body = error.response?.data;
+      final message = _messageFromDioError(error);
 
-      if (body is Map) {
-        final message = body['message'] ?? body['error'];
-
-        if (message != null && message.toString().trim().isNotEmpty) {
-          return _friendlyMessage(message.toString());
-        }
+      if (message != null) {
+        return _friendlyMessage(message);
       }
 
-      if (body is String && body.trim().isNotEmpty) {
-        return _friendlyMessage(body);
+      final statusCode = error.response?.statusCode;
+
+      if (statusCode == 400 || statusCode == 401) {
+        return 'Incorrect email or password.';
       }
 
-      if (error.response?.statusCode == 409) {
+      if (statusCode == 403) {
+        return 'Your account is not allowed to sign in. Please contact support.';
+      }
+
+      if (statusCode != null && statusCode >= 500) {
+        return 'The server is unavailable right now. Please try again shortly.';
+      }
+
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach the server. Check your connection and try again.';
+      }
+
+      return 'Unable to sign in. Please try again.';
+    }
+
+    return _friendlyMessage(
+      error.toString().replaceFirst('Exception: ', ''),
+    );
+  }
+
+  String _parseRegistrationError(Object error) {
+    if (error is DioException) {
+      final message = _messageFromDioError(error);
+
+      if (message != null) {
+        return _friendlyMessage(message);
+      }
+
+      final statusCode = error.response?.statusCode;
+
+      if (statusCode == 409) {
         return 'An account with this email already exists. Please sign in instead.';
+      }
+
+      if (statusCode == 400) {
+        return 'Please check the registration information and try again.';
+      }
+
+      if (statusCode != null && statusCode >= 500) {
+        return 'The server is unavailable right now. Please try again shortly.';
+      }
+
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach the server. Check your connection and try again.';
       }
 
       return 'Unable to create the learner account. Please try again.';
@@ -310,9 +357,62 @@ class AuthProvider extends ChangeNotifier {
     );
   }
 
+  String _parseGenericError(Object error) {
+    if (error is DioException) {
+      final message = _messageFromDioError(error);
+
+      if (message != null) {
+        return _friendlyMessage(message);
+      }
+
+      if (error.type == DioExceptionType.connectionTimeout ||
+          error.type == DioExceptionType.receiveTimeout ||
+          error.type == DioExceptionType.connectionError) {
+        return 'Unable to reach the server. Check your connection and try again.';
+      }
+
+      if (error.response?.statusCode != null &&
+          error.response!.statusCode! >= 500) {
+        return 'The server is unavailable right now. Please try again shortly.';
+      }
+
+      return 'Something went wrong. Please try again.';
+    }
+
+    return _friendlyMessage(
+      error.toString().replaceFirst('Exception: ', ''),
+    );
+  }
+
+  String? _messageFromDioError(DioException error) {
+    final body = error.response?.data;
+
+    if (body is Map) {
+      final message = body['message'] ?? body['error'];
+
+      if (message != null && message.toString().trim().isNotEmpty) {
+        return message.toString();
+      }
+    }
+
+    if (body is String && body.trim().isNotEmpty) {
+      return body.trim();
+    }
+
+    return null;
+  }
+
   String _friendlyMessage(String message) {
     final normalized = message.trim();
     final lowerCase = normalized.toLowerCase();
+
+    if (lowerCase.contains('invalid credential') ||
+        lowerCase.contains('bad credential') ||
+        lowerCase.contains('invalid password') ||
+        lowerCase.contains('incorrect password') ||
+        lowerCase.contains('user not found')) {
+      return 'Incorrect email or password.';
+    }
 
     if (lowerCase.contains('email already exists') ||
         lowerCase.contains('email already exist') ||

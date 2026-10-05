@@ -8,23 +8,53 @@ import '../models/user_model.dart';
 class AuthService {
   final Dio _dio = ApiClient().dio;
 
-  Future<AuthResponse> login(String email, String password) async {
-    final response = await _dio.post(
-      ApiConstants.login,
-      data: {
-        'email': email,
-        'password': password,
-      },
-    );
+  Future<AuthResponse> login(
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await _dio.post(
+        ApiConstants.login,
+        data: {
+          'email': email.trim().toLowerCase(),
+          'password': password,
+        },
+        options: Options(
+          extra: {
+            'skipAuthRefresh': true,
+          },
+        ),
+      );
 
-    final data = response.data;
-    final authResponse = AuthResponse.fromJson(data);
+      final body = response.data;
+      final data = body is Map && body['data'] != null
+          ? body['data']
+          : body;
 
-    await SecureStorage.saveToken(authResponse.accessToken);
-    await SecureStorage.saveRefreshToken(authResponse.refreshToken);
-    await SecureStorage.saveUserData(authResponse.user.toJsonString());
+      if (data is! Map) {
+        throw Exception('The server returned an invalid sign-in response.');
+      }
 
-    return authResponse;
+      final authResponse = AuthResponse.fromJson(
+        Map<String, dynamic>.from(data),
+      );
+
+      if (authResponse.accessToken.trim().isEmpty) {
+        throw Exception('The server did not return a valid access token.');
+      }
+
+      await SecureStorage.saveToken(authResponse.accessToken);
+      await SecureStorage.saveRefreshToken(
+        authResponse.refreshToken,
+      );
+      await SecureStorage.saveUserData(
+        authResponse.user.toJsonString(),
+      );
+
+      return authResponse;
+    } on DioException {
+      rethrow;
+    }
   }
 
   Future<String> register({
@@ -44,13 +74,17 @@ class AuthService {
           'email': email.trim().toLowerCase(),
           'password': password,
           'phone': phone?.trim(),
-          if (companyCode != null && companyCode.trim().isNotEmpty)
+          if (companyCode != null &&
+              companyCode.trim().isNotEmpty)
             'companyCode': companyCode.trim(),
         },
         options: Options(
           responseType: ResponseType.plain,
           headers: {
             'Accept': 'text/plain, application/json',
+          },
+          extra: {
+            'skipAuthRefresh': true,
           },
         ),
       );
@@ -67,13 +101,21 @@ class AuthService {
     }
   }
 
-  Future<AuthResponse> verifyOtp(String email, String otp) async {
+  Future<AuthResponse> verifyOtp(
+    String email,
+    String otp,
+  ) async {
     final response = await _dio.post(
       ApiConstants.verifyOtp,
       data: {
         'email': email,
         'otp': otp,
       },
+      options: Options(
+        extra: {
+          'skipAuthRefresh': true,
+        },
+      ),
     );
 
     final body = response.data;
@@ -86,8 +128,12 @@ class AuthService {
     );
 
     await SecureStorage.saveToken(authResponse.accessToken);
-    await SecureStorage.saveRefreshToken(authResponse.refreshToken);
-    await SecureStorage.saveUserData(authResponse.user.toJsonString());
+    await SecureStorage.saveRefreshToken(
+      authResponse.refreshToken,
+    );
+    await SecureStorage.saveUserData(
+      authResponse.user.toJsonString(),
+    );
 
     return authResponse;
   }
@@ -95,6 +141,11 @@ class AuthService {
   Future<void> resendOtp(String email) async {
     await _dio.post(
       '${ApiConstants.resendOtp}?email=${Uri.encodeComponent(email)}',
+      options: Options(
+        extra: {
+          'skipAuthRefresh': true,
+        },
+      ),
     );
   }
 
@@ -104,14 +155,19 @@ class AuthService {
       data: {
         'email': email.trim().toLowerCase(),
       },
+      options: Options(
+        extra: {
+          'skipAuthRefresh': true,
+        },
+      ),
     );
   }
 
   Future<void> resetPassword(
-      String email,
-      String otp,
-      String newPassword,
-      ) async {
+    String email,
+    String otp,
+    String newPassword,
+  ) async {
     await _dio.post(
       ApiConstants.resetPassword,
       data: {
@@ -119,6 +175,11 @@ class AuthService {
         'otp': otp.trim(),
         'newPassword': newPassword,
       },
+      options: Options(
+        extra: {
+          'skipAuthRefresh': true,
+        },
+      ),
     );
   }
 
@@ -126,7 +187,7 @@ class AuthService {
     try {
       await _dio.post(ApiConstants.logout);
     } catch (_) {
-      // Clear local session even if the server logout endpoint is unavailable.
+      // Clear local session even if server logout is unavailable.
     }
 
     await SecureStorage.clearAll();
@@ -169,7 +230,9 @@ class AuthService {
       Map<String, dynamic>.from(data as Map),
     );
 
-    await SecureStorage.saveUserData(updatedUser.toJsonString());
+    await SecureStorage.saveUserData(
+      updatedUser.toJsonString(),
+    );
 
     return updatedUser;
   }
@@ -186,7 +249,7 @@ class AuthService {
 
   Future<bool> isLoggedIn() async {
     final token = await SecureStorage.getToken();
-    return token != null;
+    return token != null && token.trim().isNotEmpty;
   }
 
   String _extractError(DioException error) {
@@ -196,7 +259,8 @@ class AuthService {
     if (body is Map) {
       final message = body['message'] ?? body['error'];
 
-      if (message != null && message.toString().trim().isNotEmpty) {
+      if (message != null &&
+          message.toString().trim().isNotEmpty) {
         return message.toString();
       }
     }

@@ -1,3 +1,4 @@
+
 <div class="page" *ngIf="!loading">
   <a routerLink="/learn/courses" class="back-link">← Back to courses</a>
 
@@ -179,7 +180,7 @@
             </ng-container>
 
             <ng-container *ngIf="selectedLesson.type === 'PDF' || selectedLesson.type === 'SLIDES'">
-              <div class="document-frame-wrapper" #docFrame *ngIf="documentUrl(selectedLesson)"><div class="document-toolbar"><button type="button" class="fullscreen-btn" (click)="toggleDocumentFullscreen(docFrame)">{{ documentFullscreen ? '✕ Exit full screen' : '⛶ Full screen' }}</button></div><iframe [src]="safeUrl(documentUrl(selectedLesson))" class="document-viewer" title="Lesson document"></iframe></div>
+              <div class="document-frame-wrapper" #docFrame *ngIf="documentUrl(selectedLesson)"><div class="document-toolbar"><button type="button" class="fullscreen-btn" (click)="toggleDocumentFullscreen(docFrame)">{{ documentFullscreen ? '✕ Exit full screen' : '⛶ Full screen' }}</button></div><div class="document-empty" *ngIf="documentPreviewLoading">Loading document…</div><div class="document-empty" *ngIf="documentPreviewError">{{ documentPreviewError }} <button type="button" class="btn btn-outline" (click)="retryDocumentPreview()">Retry</button></div><iframe *ngIf="documentPreviewUrl" [src]="documentPreviewUrl" class="document-viewer" title="Lesson document"></iframe></div>
               <div class="document-empty" *ngIf="!documentUrl(selectedLesson)">Document content is not available.</div>
             </ng-container>
 

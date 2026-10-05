@@ -10,9 +10,9 @@ import '../../../core/widgets/app_loader.dart';
 import '../../quizzes/models/quiz_model.dart';
 import '../../quizzes/services/quiz_service.dart';
 import '../models/course_model.dart';
-import '../models/lesson_model.dart';
 import '../models/module_model.dart';
 import '../providers/course_provider.dart';
+import '../repositories/course_offline_repository.dart';
 import '../services/course_service.dart';
 
 class CourseDetailScreen extends StatefulWidget {
@@ -31,6 +31,7 @@ class CourseDetailScreen extends StatefulWidget {
 
 class _CourseDetailScreenState extends State<CourseDetailScreen> {
   final _service = CourseService();
+  final _offlineRepository = CourseOfflineRepository();
   final _quizService = QuizService();
 
   CourseModel? _course;
@@ -40,6 +41,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   bool _enrolling = false;
   bool _enrolled = false;
   bool _progressLoading = false;
+  bool _showingOfflineCourse = false;
 
   String? _error;
 
@@ -52,16 +54,20 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   int get _loadedLessonCount {
     return _modules.fold<int>(
       0,
-          (total, module) => total + module.lessons.length,
+      (total, module) => total + module.lessons.length,
     );
   }
 
   int get _progressPercent => _courseProgress?.progressPercent ?? 0;
+
   int get _completedLessons => _courseProgress?.completedLessons ?? 0;
+
   bool get _assessmentUnlocked =>
       _courseProgress?.assessmentUnlocked ?? false;
+
   bool get _contentCompleted =>
       _courseProgress?.contentCompleted ?? false;
+
   bool get _hasProgress => _progressPercent > 0;
 
   @override
@@ -72,52 +78,86 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
   Future<void> _loadCourse() async {
     try {
-      final results = await Future.wait([
-        _service.getCourseById(widget.courseId),
-        _service.getMyCourses(),
-      ]);
+      final course = await _service.getCourseById(widget.courseId);
 
       if (!mounted) return;
 
-      final course = results[0] as CourseModel;
-      final myCourses = results[1] as List<CourseModel>;
-      final alreadyEnrolled = myCourses.any(
-            (item) => item.id == widget.courseId,
-      );
-
       setState(() {
         _course = course;
-        _enrolled = alreadyEnrolled;
+        _enrolled = widget.fromMyLearning;
+        _showingOfflineCourse = false;
         _loading = false;
       });
 
-      if (alreadyEnrolled) {
+      try {
+        final myCourses = await _service.getMyCourses();
+
+        if (!mounted) return;
+
+        final enrolled = myCourses.any(
+          (item) => item.id == widget.courseId,
+        );
+
+        setState(() {
+          _enrolled = enrolled;
+        });
+      } catch (_) {
+        if (!mounted) return;
+
+        setState(() {
+          _showingOfflineCourse = true;
+          _enrolled = widget.fromMyLearning || _enrolled;
+        });
+      }
+
+      if (_enrolled) {
         _loadProgress();
         _loadQuizzes();
       }
 
       _loadCourseContent();
-    } catch (e) {
-      if (!mounted) return;
+    } catch (_) {
+      await _loadCachedCourse();
+    }
+  }
 
+  Future<void> _loadCachedCourse() async {
+    final cachedCourse = await _offlineRepository.getCachedCourseById(
+      widget.courseId,
+    );
+
+    if (!mounted) return;
+
+    if (cachedCourse == null) {
       setState(() {
-        _error = e.toString();
+        _error = 'This course has not been cached on this device yet.';
         _loading = false;
       });
+      return;
     }
+
+    setState(() {
+      _course = cachedCourse;
+      _enrolled = true;
+      _showingOfflineCourse = true;
+      _loading = false;
+    });
+
+    _loadCourseContent();
   }
 
   Future<void> _refreshEnrollmentState() async {
     try {
       final myCourses = await _service.getMyCourses();
       final enrolled = myCourses.any(
-            (item) => item.id == widget.courseId,
+        (item) => item.id == widget.courseId,
       );
 
       if (!mounted) return;
 
       setState(() {
         _enrolled = enrolled;
+        _showingOfflineCourse = false;
       });
 
       if (enrolled) {
@@ -130,9 +170,21 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     } catch (_) {
       if (!mounted) return;
 
-      setState(() {
-        _enrolled = false;
-      });
+      final cachedCourse = await _offlineRepository.getCachedCourseById(
+        widget.courseId,
+      );
+
+      if (!mounted) return;
+
+      if (cachedCourse != null) {
+        setState(() {
+          _course = cachedCourse;
+          _enrolled = true;
+          _showingOfflineCourse = true;
+        });
+
+        _loadCourseContent();
+      }
     }
   }
 
@@ -190,7 +242,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     });
 
     try {
-      final quizzes = await _quizService.getQuizzesForCourse(widget.courseId);
+      final quizzes = await _quizService.getQuizzesForCourse(
+        widget.courseId,
+      );
 
       if (!mounted) return;
 
@@ -226,7 +280,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Successfully enrolled in ${_course?.title}!'),
+          content: Text(
+            'Successfully enrolled in ${_course?.title}!',
+          ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
@@ -243,7 +299,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e.toString().replaceAll('Exception: ', '')),
+          content: Text(
+            e.toString().replaceAll('Exception: ', ''),
+          ),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
         ),
@@ -265,7 +323,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     await context.read<CourseProvider>().loadMyCourses();
   }
 
-  Future<void> _openLearner({String? lessonId}) async {
+  Future<void> _openLearner({
+    String? lessonId,
+  }) async {
     final baseRoute = '/course/${widget.courseId}/learn'
         '?title=${Uri.encodeComponent(_course?.title ?? '')}';
 
@@ -276,14 +336,18 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     await context.push(route);
 
     if (!mounted) return;
+
     _loadProgress();
+    _loadCourseContent();
   }
 
   void _openQuiz(QuizModel quiz) {
     if (!_assessmentUnlocked) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Complete all lessons before starting this quiz.'),
+          content: Text(
+            'Complete all lessons before starting this quiz.',
+          ),
           behavior: SnackBarBehavior.floating,
           backgroundColor: AppColors.warning,
         ),
@@ -298,61 +362,70 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
     if (!_enrolled) {
       if (_course!.isPaid) {
         return (
-        text: 'Pay now to enroll — ${_course!.priceText}',
-        color: AppColors.warning,
-        onPressed: _enrolling ? null : _openPayment,
+          text: 'Pay now to enroll — ${_course!.priceText}',
+          color: AppColors.warning,
+          onPressed: _enrolling ? null : _openPayment,
         );
       }
 
       return (
-      text: 'Enroll Now — Free',
-      color: AppColors.primary,
-      onPressed: _enrolling ? null : _enroll,
+        text: 'Enroll Now — Free',
+        color: AppColors.primary,
+        onPressed: _enrolling ? null : _enroll,
       );
     }
 
     if (_progressLoading) {
       return (
-      text: 'Loading progress…',
-      color: AppColors.primary,
-      onPressed: null,
+        text: 'Loading progress…',
+        color: AppColors.primary,
+        onPressed: null,
       );
     }
 
     if (_contentCompleted || _progressPercent >= 100) {
       return (
-      text: 'Course Completed ✓',
-      color: AppColors.success,
-      onPressed: () => _openLearner(),
+        text: 'Course Completed ✓',
+        color: AppColors.success,
+        onPressed: () => _openLearner(),
       );
     }
 
     if (_hasProgress) {
       return (
-      text: 'Continue Course →',
-      color: AppColors.success,
-      onPressed: () => _openLearner(),
+        text: 'Continue Course →',
+        color: AppColors.success,
+        onPressed: () => _openLearner(),
       );
     }
 
     return (
-    text: 'Start Learning →',
-    color: AppColors.primary,
-    onPressed: () => _openLearner(),
+      text: 'Start Learning →',
+      color: AppColors.primary,
+      onPressed: () => _openLearner(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(body: AppLoader());
+      return const Scaffold(
+        body: AppLoader(),
+      );
     }
 
     if (_error != null || _course == null) {
       return Scaffold(
         appBar: AppBar(),
         body: Center(
-          child: Text('Course not found', style: AppTextStyles.h3),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(
+              _error ?? 'Course not found',
+              style: AppTextStyles.h3,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ),
       );
     }
@@ -362,7 +435,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(gradient: AppColors.bgGradient),
+        decoration: const BoxDecoration(
+          gradient: AppColors.bgGradient,
+        ),
         child: CustomScrollView(
           slivers: [
             SliverAppBar(
@@ -387,10 +462,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
               flexibleSpace: FlexibleSpaceBar(
                 background: course.thumbnailUrl != null
                     ? CachedNetworkImage(
-                  imageUrl: course.thumbnailUrl!,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => _HeroPlaceholder(),
-                )
+                        imageUrl: course.thumbnailUrl!,
+                        fit: BoxFit.cover,
+                        errorWidget: (_, __, ___) =>
+                            _HeroPlaceholder(),
+                      )
                     : _HeroPlaceholder(),
               ),
             ),
@@ -400,20 +476,61 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (_showingOfflineCourse) ...[
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: AppColors.warning.withOpacity(0.45),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.cloud_off_rounded,
+                              color: AppColors.warning,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                'You are viewing cached course content offline.',
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.warning,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     Row(
                       children: [
                         if (course.categoryName != null)
                           Flexible(
-                            child: _Chip(course.categoryName!, AppColors.primary),
+                            child: _Chip(
+                              course.categoryName!,
+                              AppColors.primary,
+                            ),
                           ),
                         const SizedBox(width: 8),
                         _Chip(course.level, AppColors.warning),
                         const SizedBox(width: 8),
-                        _Chip(course.language ?? 'English', AppColors.info),
+                        _Chip(
+                          course.language ?? 'English',
+                          AppColors.info,
+                        ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(course.title, style: AppTextStyles.h2),
+                    Text(
+                      course.title,
+                      style: AppTextStyles.h2,
+                    ),
                     const SizedBox(height: 8),
                     if (course.shortDescription != null)
                       Text(
@@ -432,26 +549,56 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       ),
                       child: Row(
                         children: [
-                          _StatItem(Icons.star_rounded, course.rating.toStringAsFixed(1), 'Rating', AppColors.warning),
+                          _StatItem(
+                            Icons.star_rounded,
+                            course.rating.toStringAsFixed(1),
+                            'Rating',
+                            AppColors.warning,
+                          ),
                           _Divider(),
-                          _StatItem(Icons.dashboard_rounded, '${_modules.length}', 'Modules', AppColors.primary),
+                          _StatItem(
+                            Icons.dashboard_rounded,
+                            '${_modules.length}',
+                            'Modules',
+                            AppColors.primary,
+                          ),
                           _Divider(),
-                          _StatItem(Icons.play_lesson_rounded, _contentLoading ? '${course.totalLessons}' : '$_loadedLessonCount', 'Lessons', AppColors.success),
+                          _StatItem(
+                            Icons.play_lesson_rounded,
+                            _contentLoading
+                                ? '${course.totalLessons}'
+                                : '$_loadedLessonCount',
+                            'Lessons',
+                            AppColors.success,
+                          ),
                           _Divider(),
-                          _StatItem(Icons.timer_rounded, course.durationText, 'Duration', AppColors.info),
+                          _StatItem(
+                            Icons.timer_rounded,
+                            course.durationText,
+                            'Duration',
+                            AppColors.info,
+                          ),
                         ],
                       ),
                     ),
                     const SizedBox(height: 24),
                     if (_enrolled) ...[
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Your Progress', style: AppTextStyles.h4),
                           Text(
-                            _progressLoading ? 'Loading…' : '$_progressPercent% complete',
+                            'Your Progress',
+                            style: AppTextStyles.h4,
+                          ),
+                          Text(
+                            _progressLoading
+                                ? 'Loading…'
+                                : '$_progressPercent% complete',
                             style: AppTextStyles.label.copyWith(
-                              color: _contentCompleted ? AppColors.success : AppColors.primary,
+                              color: _contentCompleted
+                                  ? AppColors.success
+                                  : AppColors.primary,
                             ),
                           ),
                         ],
@@ -463,7 +610,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                           value: _progressPercent / 100,
                           minHeight: 8,
                           backgroundColor: AppColors.divider,
-                          color: _contentCompleted ? AppColors.success : AppColors.primary,
+                          color: _contentCompleted
+                              ? AppColors.success
+                              : AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -471,20 +620,28 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         _progressLoading
                             ? 'Syncing your lesson progress…'
                             : '$_completedLessons of ${_loadedLessonCount > 0 ? _loadedLessonCount : course.totalLessons} lessons completed',
-                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                        style: AppTextStyles.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
                       ),
                       if (_contentCompleted)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             '✓ Course content completed. Quiz unlocked.',
-                            style: AppTextStyles.caption.copyWith(color: AppColors.success),
+                            style: AppTextStyles.caption.copyWith(
+                              color: AppColors.success,
+                            ),
                           ),
                         ),
                       const SizedBox(height: 24),
                     ],
-                    if (_enrolled && (_quizzesLoading || _quizzes.isNotEmpty)) ...[
-                      Text('Quizzes', style: AppTextStyles.h4),
+                    if (_enrolled &&
+                        (_quizzesLoading || _quizzes.isNotEmpty)) ...[
+                      Text(
+                        'Quizzes',
+                        style: AppTextStyles.h4,
+                      ),
                       const SizedBox(height: 12),
                       if (_quizzesLoading)
                         const Padding(
@@ -500,7 +657,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         )
                       else
                         ..._quizzes.map(
-                              (quiz) => Container(
+                          (quiz) => Container(
                             margin: const EdgeInsets.only(bottom: 10),
                             padding: const EdgeInsets.all(14),
                             decoration: BoxDecoration(
@@ -510,27 +667,40 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                             child: Row(
                               children: [
                                 Icon(
-                                  _assessmentUnlocked ? Icons.quiz_rounded : Icons.lock_outline_rounded,
-                                  color: _assessmentUnlocked ? AppColors.primary : AppColors.warning,
+                                  _assessmentUnlocked
+                                      ? Icons.quiz_rounded
+                                      : Icons.lock_outline_rounded,
+                                  color: _assessmentUnlocked
+                                      ? AppColors.primary
+                                      : AppColors.warning,
                                   size: 22,
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
-                                      Text(quiz.title, style: AppTextStyles.bodyLarge),
+                                      Text(
+                                        quiz.title,
+                                        style: AppTextStyles.bodyLarge,
+                                      ),
                                       const SizedBox(height: 2),
                                       Text(
                                         '${quiz.durationMinutes} min · ${quiz.totalQuestions} questions · Pass ${quiz.passPercent}%',
-                                        style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                        style: AppTextStyles.caption.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
                                       ),
                                       if (!_assessmentUnlocked)
                                         Padding(
-                                          padding: const EdgeInsets.only(top: 4),
+                                          padding:
+                                              const EdgeInsets.only(top: 4),
                                           child: Text(
                                             'Complete all lessons to unlock this quiz.',
-                                            style: AppTextStyles.caption.copyWith(color: AppColors.warning),
+                                            style: AppTextStyles.caption.copyWith(
+                                              color: AppColors.warning,
+                                            ),
                                           ),
                                         ),
                                     ],
@@ -538,7 +708,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 ),
                                 TextButton(
                                   onPressed: () => _openQuiz(quiz),
-                                  child: Text(_assessmentUnlocked ? 'Start' : 'Locked'),
+                                  child: Text(
+                                    _assessmentUnlocked
+                                        ? 'Start'
+                                        : 'Locked',
+                                  ),
                                 ),
                               ],
                             ),
@@ -547,15 +721,23 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       const SizedBox(height: 24),
                     ],
                     if (course.learningOutcomes.isNotEmpty) ...[
-                      Text("What You'll Learn", style: AppTextStyles.h4),
+                      Text(
+                        "What You'll Learn",
+                        style: AppTextStyles.h4,
+                      ),
                       const SizedBox(height: 12),
                       ...course.learningOutcomes.map(
-                            (outcome) => Padding(
+                        (outcome) => Padding(
                           padding: const EdgeInsets.only(bottom: 10),
                           child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
-                              const Icon(Icons.check_circle_rounded, color: AppColors.primary, size: 18),
+                              const Icon(
+                                Icons.check_circle_rounded,
+                                color: AppColors.primary,
+                                size: 18,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
@@ -573,7 +755,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       const SizedBox(height: 16),
                     ],
                     if (_contentLoading || _modules.isNotEmpty) ...[
-                      Text('Course Content', style: AppTextStyles.h4),
+                      Text(
+                        'Course Content',
+                        style: AppTextStyles.h4,
+                      ),
                       const SizedBox(height: 12),
                       if (_contentLoading)
                         const Padding(
@@ -589,7 +774,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         )
                       else
                         ..._modules.asMap().entries.map(
-                              (entry) {
+                          (entry) {
                             final moduleIndex = entry.key;
                             final module = entry.value;
 
@@ -600,7 +785,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Theme(
-                                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                                data: Theme.of(context).copyWith(
+                                  dividerColor: Colors.transparent,
+                                ),
                                 child: ExpansionTile(
                                   initiallyExpanded: moduleIndex == 0,
                                   title: Text(
@@ -609,24 +796,33 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                   ),
                                   subtitle: Text(
                                     '${module.lessons.length} lesson${module.lessons.length == 1 ? '' : 's'}',
-                                    style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.textSecondary,
+                                    ),
                                   ),
                                   children: module.lessons.map(
-                                        (lesson) {
-                                      final unlocked = _enrolled || lesson.isPreview;
+                                    (lesson) {
+                                      final unlocked =
+                                          _enrolled || lesson.isPreview;
 
                                       return ListTile(
                                         dense: true,
                                         onTap: () {
                                           if (unlocked) {
-                                            _openLearner(lessonId: lesson.id);
+                                            _openLearner(
+                                              lessonId: lesson.id,
+                                            );
                                             return;
                                           }
 
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
                                             const SnackBar(
-                                              content: Text('Enroll in this course to unlock this lesson.'),
-                                              behavior: SnackBarBehavior.floating,
+                                              content: Text(
+                                                'Enroll in this course to unlock this lesson.',
+                                              ),
+                                              behavior:
+                                                  SnackBarBehavior.floating,
                                             ),
                                           );
                                         },
@@ -634,22 +830,32 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                                           lesson.isCompleted
                                               ? Icons.check_circle_rounded
                                               : unlocked
-                                              ? Icons.play_circle_outline_rounded
-                                              : Icons.lock_outline_rounded,
+                                                  ? Icons
+                                                      .play_circle_outline_rounded
+                                                  : Icons
+                                                      .lock_outline_rounded,
                                           color: lesson.isCompleted
                                               ? AppColors.success
                                               : unlocked
-                                              ? AppColors.primary
-                                              : AppColors.textMuted,
+                                                  ? AppColors.primary
+                                                  : AppColors.textMuted,
                                           size: 20,
                                         ),
-                                        title: Text(lesson.title, style: AppTextStyles.body),
-                                        trailing: lesson.durationText.isNotEmpty
-                                            ? Text(
-                                          lesson.durationText,
-                                          style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
-                                        )
-                                            : null,
+                                        title: Text(
+                                          lesson.title,
+                                          style: AppTextStyles.body,
+                                        ),
+                                        trailing:
+                                            lesson.durationText.isNotEmpty
+                                                ? Text(
+                                                    lesson.durationText,
+                                                    style: AppTextStyles.caption
+                                                        .copyWith(
+                                                      color: AppColors
+                                                          .textSecondary,
+                                                    ),
+                                                  )
+                                                : null,
                                       );
                                     },
                                   ).toList(),
@@ -661,7 +867,10 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                       const SizedBox(height: 16),
                     ],
                     if (course.tags.isNotEmpty) ...[
-                      Text('Topics Covered', style: AppTextStyles.h4),
+                      Text(
+                        'Topics Covered',
+                        style: AppTextStyles.h4,
+                      ),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
@@ -669,21 +878,33 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                         children: course.tags
                             .map(
                               (tag) => Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: AppColors.surface,
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(color: AppColors.divider),
-                            ),
-                            child: Text(tag, style: AppTextStyles.caption),
-                          ),
-                        )
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppColors.surface,
+                                  borderRadius:
+                                      BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: AppColors.divider,
+                                  ),
+                                ),
+                                child: Text(
+                                  tag,
+                                  style: AppTextStyles.caption,
+                                ),
+                              ),
+                            )
                             .toList(),
                       ),
                       const SizedBox(height: 24),
                     ],
                     if (course.description != null) ...[
-                      Text('About This Course', style: AppTextStyles.h4),
+                      Text(
+                        'About This Course',
+                        style: AppTextStyles.h4,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         course.description!,
@@ -705,7 +926,11 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 28),
         decoration: BoxDecoration(
           color: AppColors.surface,
-          border: Border(top: BorderSide(color: AppColors.divider)),
+          border: Border(
+            top: BorderSide(
+              color: AppColors.divider,
+            ),
+          ),
         ),
         child: Row(
           children: [
@@ -714,11 +939,16 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Price', style: AppTextStyles.caption),
+                  Text(
+                    'Price',
+                    style: AppTextStyles.caption,
+                  ),
                   Text(
                     course.priceText,
                     style: AppTextStyles.h3.copyWith(
-                      color: course.isPaid ? AppColors.warning : AppColors.success,
+                      color: course.isPaid
+                          ? AppColors.warning
+                          : AppColors.success,
                     ),
                   ),
                 ],
@@ -760,21 +990,29 @@ class _Chip extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _Chip(this.label, this.color);
+  const _Chip(
+    this.label,
+    this.color,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: 5,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
+        color: color.withOpacity(0.14),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
         label,
+        style: AppTextStyles.caption.copyWith(
+          color: color,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: AppTextStyles.caption.copyWith(color: color),
       ),
     );
   }
@@ -786,17 +1024,39 @@ class _StatItem extends StatelessWidget {
   final String label;
   final Color color;
 
-  const _StatItem(this.icon, this.value, this.label, this.color);
+  const _StatItem(
+    this.icon,
+    this.value,
+    this.label,
+    this.color,
+  );
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 4),
-          Text(value, style: AppTextStyles.label.copyWith(color: color)),
-          Text(label, style: AppTextStyles.caption),
+          Icon(
+            icon,
+            color: color,
+            size: 20,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value.isEmpty ? '—' : value,
+            style: AppTextStyles.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: AppTextStyles.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -807,7 +1067,7 @@ class _Divider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 36,
+      height: 44,
       width: 1,
       color: AppColors.divider,
     );

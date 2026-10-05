@@ -7,7 +7,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_pdfview/flutter_pdfview.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
 
@@ -31,12 +30,10 @@ class CourseLearnScreen extends StatefulWidget {
   });
 
   @override
-  State<CourseLearnScreen> createState() =>
-      _CourseLearnScreenState();
+  State<CourseLearnScreen> createState() => _CourseLearnScreenState();
 }
 
-class _CourseLearnScreenState
-    extends State<CourseLearnScreen> {
+class _CourseLearnScreenState extends State<CourseLearnScreen> {
   final _service = CourseService();
   final _dio = Dio();
 
@@ -49,6 +46,7 @@ class _CourseLearnScreenState
   bool _ratingLoading = false;
   bool _ratingSaving = false;
   bool _downloadingLesson = false;
+  bool _showingCachedLessons = false;
 
   String? _courseLoadError;
   String? _mediaError;
@@ -92,6 +90,7 @@ class _CourseLearnScreenState
 
     try {
       final lessons = await _service.getLessons(widget.courseId);
+
       if (!mounted) return;
 
       lessons.sort(
@@ -114,6 +113,7 @@ class _CourseLearnScreenState
       setState(() {
         _lessons = lessons;
         _selectedIndex = selectedIndex;
+        _showingCachedLessons = false;
         _loading = false;
       });
 
@@ -127,6 +127,7 @@ class _CourseLearnScreenState
       }
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
         _courseLoadError = _friendlyError(e);
         _loading = false;
@@ -135,10 +136,13 @@ class _CourseLearnScreenState
   }
 
   Future<void> _loadCourseRating() async {
-    if (mounted) setState(() => _ratingLoading = true);
+    if (mounted) {
+      setState(() => _ratingLoading = true);
+    }
 
     try {
       final rating = await _service.getCourseRating(widget.courseId);
+
       if (!mounted) return;
 
       setState(() {
@@ -148,7 +152,12 @@ class _CourseLearnScreenState
         _ratingLoading = false;
       });
     } catch (_) {
-      if (mounted) setState(() => _ratingLoading = false);
+      if (mounted) {
+        setState(() {
+          _ratingLoading = false;
+          _showingCachedLessons = true;
+        });
+      }
     }
   }
 
@@ -162,6 +171,7 @@ class _CourseLearnScreenState
         courseId: widget.courseId,
         stars: stars,
       );
+
       if (!mounted) return;
 
       setState(() {
@@ -180,7 +190,9 @@ class _CourseLearnScreenState
       );
     } catch (e) {
       if (!mounted) return;
+
       setState(() => _ratingSaving = false);
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_friendlyError(e)),
@@ -195,10 +207,14 @@ class _CourseLearnScreenState
     List<LessonModel> lessons,
     String? selectedLessonId,
   ) {
-    if (selectedLessonId == null || selectedLessonId.isEmpty) return 0;
+    if (selectedLessonId == null || selectedLessonId.isEmpty) {
+      return 0;
+    }
+
     final index = lessons.indexWhere(
       (lesson) => lesson.id == selectedLessonId,
     );
+
     return index >= 0 ? index : 0;
   }
 
@@ -214,22 +230,26 @@ class _CourseLearnScreenState
     required bool applyResumeLesson,
   }) async {
     if (_lessons.isEmpty) return;
+
     setState(() => _progressLoading = true);
 
     try {
       final progress = await _service.getCourseProgress(widget.courseId);
+
       if (!mounted) return;
 
       final hydratedLessons = _applyProgress(
         _lessons,
         progress.lessons,
       );
+
       final resumeIndex = applyResumeLesson
           ? _findResumeIndex(
               hydratedLessons,
               progress.resumeLessonId,
             )
           : _selectedIndex;
+
       final shouldChangeLesson = resumeIndex != _selectedIndex;
 
       setState(() {
@@ -241,9 +261,17 @@ class _CourseLearnScreenState
         _progressLoading = false;
       });
 
-      if (shouldChangeLesson) _playLesson(resumeIndex);
+      if (shouldChangeLesson) {
+        _playLesson(resumeIndex);
+      }
     } catch (_) {
-      if (mounted) setState(() => _progressLoading = false);
+      if (mounted) {
+        setState(() {
+          _progressLoading = false;
+          _showingCachedLessons = true;
+          _updateLocalCourseProgress();
+        });
+      }
     }
   }
 
@@ -257,7 +285,10 @@ class _CourseLearnScreenState
 
     return lessons.map((lesson) {
       final progress = progressByLessonId[lesson.id];
-      if (progress == null) return lesson;
+
+      if (progress == null) {
+        return lesson;
+      }
 
       return lesson.copyWith(
         isCompleted: progress.completed,
@@ -272,10 +303,14 @@ class _CourseLearnScreenState
     List<LessonModel> lessons,
     String? resumeLessonId,
   ) {
-    if (resumeLessonId == null || resumeLessonId.isEmpty) return 0;
+    if (resumeLessonId == null || resumeLessonId.isEmpty) {
+      return 0;
+    }
+
     final index = lessons.indexWhere(
       (lesson) => lesson.id == resumeLessonId,
     );
+
     return index >= 0 ? index : 0;
   }
 
@@ -284,11 +319,31 @@ class _CourseLearnScreenState
         .toString()
         .replaceAll('Exception: ', '')
         .trim();
+
     return message.isEmpty ? 'Could not load this course.' : message;
   }
 
   Future<void> _refreshCourseProgress() async {
     await _loadProgressOnly();
+  }
+
+  void _updateLocalCourseProgress() {
+    if (_lessons.isEmpty) {
+      _courseProgressPercent = 0;
+      _completedLessons = 0;
+      _contentCompleted = false;
+      return;
+    }
+
+    final completed = _lessons.where(
+      (lesson) => lesson.isCompleted,
+    ).length;
+
+    _completedLessons = completed;
+    _courseProgressPercent = (
+      completed / _lessons.length * 100
+    ).round();
+    _contentCompleted = completed == _lessons.length;
   }
 
   void _playLesson(
@@ -321,35 +376,58 @@ class _CourseLearnScreenState
     }
   }
 
-  void _loadMediaLesson(LessonModel lesson, int index) {
+  void _loadMediaLesson(
+    LessonModel lesson,
+    int index,
+  ) {
     final url = lesson.videoUrl;
 
     if (url == null || url.isEmpty) {
-      setState(() => _mediaError =
-          'No media file has been uploaded for this lesson yet.');
+      setState(() {
+        _mediaError =
+            'This lesson is cached, but its media file has not been downloaded on this device.';
+      });
       return;
     }
 
     if (lesson.isYoutube && lesson.youtubeId != null) {
       _ytController = YoutubePlayerController(
         initialVideoId: lesson.youtubeId!,
-        flags: const YoutubePlayerFlags(autoPlay: true, mute: false),
+        flags: const YoutubePlayerFlags(
+          autoPlay: true,
+          mute: false,
+        ),
       );
       return;
     }
 
-    final mediaUrl = Uri.tryParse(url);
-    if (mediaUrl == null) {
-      setState(() => _mediaError = 'This lesson has an invalid media URL.');
-      return;
-    }
+    final localFile = File(url);
 
-    _videoController = VideoPlayerController.networkUrl(mediaUrl);
+    if (localFile.existsSync()) {
+      _videoController = VideoPlayerController.file(localFile);
+    } else {
+      final mediaUrl = Uri.tryParse(url);
+
+      if (mediaUrl == null ||
+          mediaUrl.scheme.isEmpty ||
+          mediaUrl.scheme == 'file') {
+        setState(() {
+          _mediaError =
+              'This lesson media is not available offline. Download it while online to play it later.';
+        });
+        return;
+      }
+
+      _videoController = VideoPlayerController.networkUrl(mediaUrl);
+    }
 
     _videoController!.initialize().then((_) async {
       if (!mounted || _videoController == null) return;
 
-      final resumePosition = Duration(seconds: lesson.watchedSeconds);
+      final resumePosition = Duration(
+        seconds: lesson.watchedSeconds,
+      );
+
       if (lesson.watchedSeconds > 0 &&
           _videoController!.value.duration > resumePosition) {
         await _videoController!.seekTo(resumePosition);
@@ -381,27 +459,55 @@ class _CourseLearnScreenState
         ),
       );
 
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+      }
     }).catchError((_) {
       if (!mounted) return;
+
       _disposeMediaControllers();
-      setState(() => _mediaError =
-          'Unable to load this lesson media. Please try another lesson.');
+
+      setState(() {
+        _mediaError =
+            'Unable to load this lesson media. Please try another lesson.';
+      });
     });
   }
 
-  Future<void> _loadPdfDocument(LessonModel lesson) async {
+  Future<void> _loadPdfDocument(
+    LessonModel lesson,
+  ) async {
     final documentUrl = lesson.documentUrl;
 
     if (documentUrl == null || documentUrl.isEmpty) {
-      setState(() => _pdfError =
-          'No document has been uploaded for this lesson yet.');
+      setState(() {
+        _pdfError =
+            'This lesson is cached, but its document file has not been downloaded on this device.';
+      });
+      return;
+    }
+
+    final directFile = File(documentUrl);
+
+    if (await directFile.exists()) {
+      if (!mounted) return;
+
+      setState(() {
+        _pdfLoading = false;
+        _pdfError = null;
+        _pdfLessonId = lesson.id;
+        _pdfFilePath = directFile.path;
+      });
       return;
     }
 
     final uri = Uri.tryParse(documentUrl);
-    if (uri == null) {
-      setState(() => _pdfError = 'This document has an invalid URL.');
+
+    if (uri == null || uri.scheme.isEmpty || uri.scheme == 'file') {
+      setState(() {
+        _pdfError =
+            'This document is not available offline. Download it while online to view it later.';
+      });
       return;
     }
 
@@ -415,7 +521,9 @@ class _CourseLearnScreenState
     try {
       final tempDir = await getTemporaryDirectory();
       final filePath = '${tempDir.path}/lesson_${lesson.id}.pdf';
+
       await _dio.download(uri.toString(), filePath);
+
       if (!mounted) return;
 
       setState(() {
@@ -424,9 +532,11 @@ class _CourseLearnScreenState
       });
     } catch (_) {
       if (!mounted) return;
+
       setState(() {
         _pdfLoading = false;
-        _pdfError = 'Unable to load this document.';
+        _pdfError =
+            'Unable to load this document. Download it while online to view it offline.';
       });
     }
   }
@@ -447,32 +557,72 @@ class _CourseLearnScreenState
     }
 
     final lesson = _lessons[_selectedIndex];
-    if (!lesson.downloadable || _downloadingLesson) return;
+
+    if (!lesson.downloadable || _downloadingLesson) {
+      return;
+    }
 
     setState(() => _downloadingLesson = true);
 
     try {
       final directory = await getApplicationDocumentsDirectory();
+
       final safeTitle = lesson.title
-          .replaceAll(RegExp(r'[^a-zA-Z0-9_-]+'), '_')
+          .replaceAll(
+            RegExp(r'[^a-zA-Z0-9_-]+'),
+            '_',
+          )
           .replaceAll(RegExp(r'_+'), '_')
           .replaceAll(RegExp(r'^_|_$'), '');
-      final fileName = '${safeTitle.isEmpty ? 'lesson' : safeTitle}'
-          '${_downloadExtension(lesson)}';
-      final filePath = path.join(directory.path, fileName);
 
-      await _service.downloadLessonFile(
+      final fileName =
+          '${lesson.id}_${safeTitle.isEmpty ? 'lesson' : safeTitle}'
+          '${_downloadExtension(lesson)}';
+
+      final filePath = path.join(
+        directory.path,
+        fileName,
+      );
+
+      final savedPath = await _service.downloadLessonFile(
         lessonId: lesson.id,
         filePath: filePath,
       );
 
       if (!mounted) return;
-      await Share.shareXFiles(
-        [XFile(filePath)],
-        subject: lesson.title,
+
+      setState(() {
+        _lessons[_selectedIndex] = _lessons[_selectedIndex].copyWith(
+          localFilePath: savedPath,
+        );
+      });
+      if (_isPdfLessonSelected()) {
+        await _loadPdfDocument(
+          _lessons[_selectedIndex],
+        );
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Downloaded for offline use.'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.success,
+        ),
       );
+
+      if (_isPdfLessonSelected()) {
+        _loadPdfDocument(
+          _lessons[_selectedIndex].copyWith(
+            downloadable: lesson.downloadable,
+          ),
+        );
+      }
+
     } catch (e) {
       if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_friendlyError(e)),
@@ -480,14 +630,19 @@ class _CourseLearnScreenState
         ),
       );
     } finally {
-      if (mounted) setState(() => _downloadingLesson = false);
+      if (mounted) {
+        setState(() => _downloadingLesson = false);
+      }
     }
   }
 
-  String _downloadExtension(LessonModel lesson) {
+  String _downloadExtension(
+    LessonModel lesson,
+  ) {
     switch (lesson.type.toUpperCase()) {
       case 'PDF':
       case 'SLIDES':
+      case 'DOCUMENT':
         return '.pdf';
       case 'AUDIO':
         return '.mp3';
@@ -500,6 +655,7 @@ class _CourseLearnScreenState
 
   void _onVideoPositionChanged() {
     final controller = _videoController;
+
     if (controller == null ||
         !controller.value.isInitialized ||
         _lessons.isEmpty) {
@@ -511,18 +667,25 @@ class _CourseLearnScreenState
 
     if (positionSeconds - _lastSavedPositionSeconds >=
         _progressSaveIntervalSeconds) {
-      _saveProgress(positionSeconds, completed: false);
+      _saveProgress(
+        positionSeconds,
+        completed: false,
+      );
     }
 
     if (durationSeconds > 0 &&
         positionSeconds >= durationSeconds &&
         !controller.value.isPlaying) {
-      _saveProgress(durationSeconds, completed: true);
+      _saveProgress(
+        durationSeconds,
+        completed: true,
+      );
     }
   }
 
   Future<void> _saveCurrentMediaProgress() async {
     final controller = _videoController;
+
     if (controller == null ||
         _lessons.isEmpty ||
         !controller.value.isInitialized) {
@@ -549,15 +712,20 @@ class _CourseLearnScreenState
     }
 
     final lesson = _lessons[_selectedIndex];
-    if (lesson.type != 'VIDEO' && lesson.type != 'AUDIO') return;
+
+    if (lesson.type != 'VIDEO' && lesson.type != 'AUDIO') {
+      return;
+    }
 
     _savingProgress = true;
+
     try {
       final progress = await _service.saveLessonProgress(
         lessonId: lesson.id,
         watchedSeconds: watchedSeconds < 0 ? 0 : watchedSeconds,
         completed: completed,
       );
+
       if (!mounted) return;
 
       _replaceLessonProgress(
@@ -567,16 +735,54 @@ class _CourseLearnScreenState
         progressPercent: progress.progressPercent,
         durationSeconds: progress.durationSeconds,
       );
+
       _lastSavedPositionSeconds = progress.watchedSeconds;
 
       if (progress.completed || completed) {
         await _refreshCourseProgress();
       }
     } catch (_) {
-      // Keep playback uninterrupted if saving progress fails.
+      if (mounted) {
+        final localProgressPercent = completed
+            ? 100
+            : _progressPercentForLesson(
+                lesson,
+                watchedSeconds,
+              );
+
+        _replaceLessonProgress(
+          lesson.id,
+          completed: completed || lesson.isCompleted,
+          watchedSeconds: watchedSeconds,
+          progressPercent: localProgressPercent,
+          durationSeconds: lesson.durationSeconds,
+        );
+
+        _lastSavedPositionSeconds = watchedSeconds;
+
+        setState(() {
+          _showingCachedLessons = true;
+          _updateLocalCourseProgress();
+        });
+      }
     } finally {
       _savingProgress = false;
     }
+  }
+
+  int _progressPercentForLesson(
+    LessonModel lesson,
+    int watchedSeconds,
+  ) {
+    final durationSeconds = lesson.durationSeconds;
+
+    if (durationSeconds == null || durationSeconds <= 0) {
+      return lesson.progressPercent;
+    }
+
+    return ((watchedSeconds / durationSeconds) * 100)
+        .round()
+        .clamp(0, 100);
   }
 
   Future<void> _markCurrentLessonCompleted() async {
@@ -588,11 +794,18 @@ class _CourseLearnScreenState
     }
 
     final lesson = _lessons[_selectedIndex];
-    if (lesson.isCompleted) return;
+
+    if (lesson.isCompleted) {
+      return;
+    }
 
     setState(() => _markingComplete = true);
+
     try {
-      final progress = await _service.markLessonCompleted(lesson.id);
+      final progress = await _service.markLessonCompleted(
+        lesson.id,
+      );
+
       if (!mounted) return;
 
       _replaceLessonProgress(
@@ -602,7 +815,9 @@ class _CourseLearnScreenState
         progressPercent: progress.progressPercent,
         durationSeconds: progress.durationSeconds,
       );
+
       await _refreshCourseProgress();
+
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -612,17 +827,35 @@ class _CourseLearnScreenState
           backgroundColor: AppColors.success,
         ),
       );
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
+
+      _replaceLessonProgress(
+        lesson.id,
+        completed: true,
+        watchedSeconds: lesson.watchedSeconds,
+        progressPercent: 100,
+        durationSeconds: lesson.durationSeconds,
+      );
+
+      setState(() {
+        _showingCachedLessons = true;
+        _updateLocalCourseProgress();
+      });
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(_friendlyError(e)),
+        const SnackBar(
+          content: Text(
+            'Lesson marked complete on this device. It will sync when you are online.',
+          ),
           behavior: SnackBarBehavior.floating,
-          backgroundColor: AppColors.error,
+          backgroundColor: AppColors.warning,
         ),
       );
     } finally {
-      if (mounted) setState(() => _markingComplete = false);
+      if (mounted) {
+        setState(() => _markingComplete = false);
+      }
     }
   }
 
@@ -636,6 +869,7 @@ class _CourseLearnScreenState
     final index = _lessons.indexWhere(
       (lesson) => lesson.id == lessonId,
     );
+
     if (index < 0) return;
 
     setState(() {
@@ -645,6 +879,7 @@ class _CourseLearnScreenState
         progressPercent: progressPercent,
         durationSeconds: durationSeconds,
       );
+      _updateLocalCourseProgress();
     });
   }
 
@@ -666,15 +901,25 @@ class _CourseLearnScreenState
     super.dispose();
   }
 
-  // The download arrow is shown only when the admin ticked "downloadable"
-  // and the lesson actually has a file (video, audio, PDF or slides).
-  bool _canDownload(LessonModel lesson) =>
-      lesson.downloadable && lesson.type != 'TEXT' && !lesson.isYoutube;
+  bool _canDownload(
+    LessonModel lesson,
+  ) {
+    return lesson.downloadable &&
+        lesson.type != 'TEXT' &&
+        !lesson.isYoutube;
+  }
 
   bool _isPdfLessonSelected() {
-    if (_selectedIndex < 0 || _selectedIndex >= _lessons.length) return false;
+    if (_selectedIndex < 0 ||
+        _selectedIndex >= _lessons.length) {
+      return false;
+    }
+
     final type = _lessons[_selectedIndex].type;
-    return type == 'PDF' || type == 'SLIDES' || type == 'DOCUMENT';
+
+    return type == 'PDF' ||
+        type == 'SLIDES' ||
+        type == 'DOCUMENT';
   }
 
   @override
@@ -717,12 +962,49 @@ class _CourseLearnScreenState
                     : Column(
                         children: [
                           _buildTopBar(),
+                          if (_showingCachedLessons)
+                            _buildOfflineBanner(),
                           _buildCourseProgress(),
                           _buildRatingPanel(),
-                          Expanded(child: _buildLessonContent()),
+                          Expanded(
+                            child: _buildLessonContent(),
+                          ),
                           _buildNavigation(),
                         ],
                       ),
+      ),
+    );
+  }
+
+  Widget _buildOfflineBanner() {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppColors.warning.withOpacity(0.45),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.cloud_off_rounded,
+            color: AppColors.warning,
+            size: 18,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              'Viewing cached lessons. Downloads and progress may sync when you are online.',
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.warning,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -731,9 +1013,16 @@ class _CourseLearnScreenState
     if (_isPdfLessonSelected()) {
       return Column(
         children: [
-          Expanded(flex: 3, child: _buildPlayer()),
-          if (_canDownload(_lessons[_selectedIndex])) _buildNowPlaying(),
-          Expanded(flex: 2, child: _buildLessonList()),
+          Expanded(
+            flex: 3,
+            child: _buildPlayer(),
+          ),
+          if (_canDownload(_lessons[_selectedIndex]))
+            _buildNowPlaying(),
+          Expanded(
+            flex: 2,
+            child: _buildLessonList(),
+          ),
         ],
       );
     }
@@ -747,12 +1036,17 @@ class _CourseLearnScreenState
               children: [
                 _buildPlayer(),
                 _buildNowPlaying(),
-                Divider(color: AppColors.divider, height: 1),
+                Divider(
+                  color: AppColors.divider,
+                  height: 1,
+                ),
               ],
             ),
           ),
         ),
-        Expanded(child: _buildLessonList()),
+        Expanded(
+          child: _buildLessonList(),
+        ),
       ],
     );
   }
@@ -857,11 +1151,17 @@ class _CourseLearnScreenState
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.divider),
+          border: Border.all(
+            color: AppColors.divider,
+          ),
         ),
         child: Row(
           children: [
-            Icon(Icons.star_rounded, color: Colors.amber.shade600, size: 22),
+            Icon(
+              Icons.star_rounded,
+              color: Colors.amber.shade600,
+              size: 22,
+            ),
             const SizedBox(width: 8),
             Expanded(
               child: _ratingLoading
@@ -887,7 +1187,9 @@ class _CourseLearnScreenState
                           mainAxisSize: MainAxisSize.min,
                           children: List.generate(5, (index) {
                             final star = index + 1;
-                            final isSelected = star <= (_myRating ?? 0);
+                            final isSelected =
+                                star <= (_myRating ?? 0);
+
                             return InkWell(
                               onTap: _ratingSaving
                                   ? null
@@ -930,15 +1232,18 @@ class _CourseLearnScreenState
 
   Widget _buildPlayer() {
     final lesson = _lessons[_selectedIndex];
+
     if (_mediaError != null) {
       return _MediaErrorView(
         message: _mediaError!,
         onRetry: () => _playLesson(_selectedIndex),
       );
     }
+
     if (lesson.type == 'VIDEO' || lesson.type == 'AUDIO') {
       return _buildMediaPlayer(lesson);
     }
+
     if (lesson.type == 'TEXT' ||
         lesson.textContent?.trim().isNotEmpty == true) {
       return _TextLessonView(
@@ -947,6 +1252,7 @@ class _CourseLearnScreenState
         markingComplete: _markingComplete,
       );
     }
+
     if (lesson.type == 'PDF' ||
         lesson.type == 'SLIDES' ||
         lesson.type == 'DOCUMENT') {
@@ -958,9 +1264,12 @@ class _CourseLearnScreenState
         onRetry: () => _loadPdfDocument(lesson),
         onMarkComplete: _markCurrentLessonCompleted,
         markingComplete: _markingComplete,
-        onControllerReady: (controller) => _pdfController = controller,
+        onControllerReady: (controller) {
+          _pdfController = controller;
+        },
       );
     }
+
     return _UnsupportedLessonView(
       lesson: lesson,
       onMarkComplete: _markCurrentLessonCompleted,
@@ -968,13 +1277,17 @@ class _CourseLearnScreenState
     );
   }
 
-  Widget _buildMediaPlayer(LessonModel lesson) {
+  Widget _buildMediaPlayer(
+    LessonModel lesson,
+  ) {
     if (lesson.videoUrl == null || lesson.videoUrl!.isEmpty) {
       return _MediaErrorView(
-        message: 'No media file has been uploaded for this lesson yet.',
+        message:
+            'This lesson media is not available offline. Download it while online to play it later.',
         onRetry: () => _playLesson(_selectedIndex),
       );
     }
+
     if (lesson.isYoutube && _ytController != null) {
       return YoutubePlayer(
         controller: _ytController!,
@@ -982,6 +1295,7 @@ class _CourseLearnScreenState
         progressIndicatorColor: AppColors.primary,
       );
     }
+
     if (_chewieController != null &&
         _videoController != null &&
         _videoController!.value.isInitialized) {
@@ -991,20 +1305,26 @@ class _CourseLearnScreenState
             : (_videoController!.value.aspectRatio == 0
                 ? 16 / 9
                 : _videoController!.value.aspectRatio),
-        child: Chewie(controller: _chewieController!),
+        child: Chewie(
+          controller: _chewieController!,
+        ),
       );
     }
+
     return AspectRatio(
       aspectRatio: lesson.type == 'AUDIO' ? 16 / 5 : 16 / 9,
       child: Container(
         color: Colors.black,
-        child: const Center(child: AppLoader()),
+        child: const Center(
+          child: AppLoader(),
+        ),
       ),
     );
   }
 
   Widget _buildNowPlaying() {
     final lesson = _lessons[_selectedIndex];
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
       child: Row(
@@ -1047,9 +1367,13 @@ class _CourseLearnScreenState
                   ? const SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
                     )
-                  : const Icon(Icons.download_outlined),
+                  : const Icon(
+                      Icons.download_outlined,
+                    ),
               color: AppColors.primary,
             ),
           ],
@@ -1058,14 +1382,22 @@ class _CourseLearnScreenState
     );
   }
 
-  IconData _lessonTypeIcon(String type) {
+  IconData _lessonTypeIcon(
+    String type,
+  ) {
     switch (type) {
-      case 'VIDEO': return Icons.play_circle_rounded;
-      case 'AUDIO': return Icons.audiotrack_rounded;
-      case 'PDF': return Icons.picture_as_pdf_rounded;
-      case 'SLIDES': return Icons.slideshow_rounded;
-      case 'TEXT': return Icons.subject_rounded;
-      default: return Icons.description_outlined;
+      case 'VIDEO':
+        return Icons.play_circle_rounded;
+      case 'AUDIO':
+        return Icons.audiotrack_rounded;
+      case 'PDF':
+        return Icons.picture_as_pdf_rounded;
+      case 'SLIDES':
+        return Icons.slideshow_rounded;
+      case 'TEXT':
+        return Icons.subject_rounded;
+      default:
+        return Icons.description_outlined;
     }
   }
 
@@ -1077,6 +1409,7 @@ class _CourseLearnScreenState
       itemBuilder: (context, index) {
         final lesson = _lessons[index];
         final isSelected = index == _selectedIndex;
+
         return ListTile(
           onTap: () => _playLesson(index),
           leading: Container(
@@ -1092,20 +1425,33 @@ class _CourseLearnScreenState
             ),
             child: Center(
               child: isSelected
-                  ? const Icon(Icons.play_arrow_rounded,
-                      color: AppColors.white, size: 18)
+                  ? const Icon(
+                      Icons.play_arrow_rounded,
+                      color: AppColors.white,
+                      size: 18,
+                    )
                   : lesson.isCompleted
-                      ? const Icon(Icons.check_rounded,
-                          color: AppColors.success, size: 18)
-                      : Icon(_lessonTypeIcon(lesson.type),
-                          color: AppColors.textSecondary, size: 18),
+                      ? const Icon(
+                          Icons.check_rounded,
+                          color: AppColors.success,
+                          size: 18,
+                        )
+                      : Icon(
+                          _lessonTypeIcon(lesson.type),
+                          color: AppColors.textSecondary,
+                          size: 18,
+                        ),
             ),
           ),
           title: Text(
             lesson.title,
             style: AppTextStyles.body.copyWith(
-              color: isSelected ? AppColors.primary : AppColors.white,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+              color: isSelected
+                  ? AppColors.primary
+                  : AppColors.white,
+              fontWeight: isSelected
+                  ? FontWeight.w600
+                  : FontWeight.normal,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -1113,7 +1459,8 @@ class _CourseLearnScreenState
           subtitle: Text(
             [
               lesson.type,
-              if (lesson.durationText.isNotEmpty) lesson.durationText,
+              if (lesson.durationText.isNotEmpty)
+                lesson.durationText,
               if (lesson.progressPercent > 0 && !lesson.isCompleted)
                 '${lesson.progressPercent}% complete',
               if (lesson.isCompleted) 'Completed',
@@ -1125,8 +1472,11 @@ class _CourseLearnScreenState
             ),
           ),
           trailing: lesson.isCompleted
-              ? const Icon(Icons.check_circle_rounded,
-                  color: AppColors.success, size: 18)
+              ? const Icon(
+                  Icons.check_circle_rounded,
+                  color: AppColors.success,
+                  size: 18,
+                )
               : null,
         );
       },
@@ -1138,7 +1488,11 @@ class _CourseLearnScreenState
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.divider)),
+        border: Border(
+          top: BorderSide(
+            color: AppColors.divider,
+          ),
+        ),
       ),
       child: Row(
         children: [
@@ -1151,7 +1505,9 @@ class _CourseLearnScreenState
               label: const Text('Previous'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.white,
-                side: BorderSide(color: AppColors.divider),
+                side: BorderSide(
+                  color: AppColors.divider,
+                ),
               ),
             ),
           ),
@@ -1194,17 +1550,25 @@ class _MediaErrorView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.error_outline_rounded,
-              color: AppColors.warning, size: 48),
+          const Icon(
+            Icons.error_outline_rounded,
+            color: AppColors.warning,
+            size: 48,
+          ),
           const SizedBox(height: 12),
-          Text('Unable to play this lesson',
-              style: AppTextStyles.bodyLarge,
-              textAlign: TextAlign.center),
+          Text(
+            'Unable to play this lesson',
+            style: AppTextStyles.bodyLarge,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 6),
-          Text(message,
-              style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary),
-              textAlign: TextAlign.center),
+          Text(
+            message,
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 14),
           TextButton.icon(
             onPressed: onRetry,
@@ -1243,12 +1607,20 @@ class _TextLessonView extends StatelessWidget {
         children: [
           if (lesson.description != null &&
               lesson.description!.trim().isNotEmpty)
-            Text(lesson.description!,
-                style: AppTextStyles.body.copyWith(
-                    color: AppColors.textSecondary, height: 1.6)),
+            Text(
+              lesson.description!,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary,
+                height: 1.6,
+              ),
+            ),
           const SizedBox(height: 18),
-          SelectableText(text,
-              style: AppTextStyles.body.copyWith(height: 1.7)),
+          SelectableText(
+            text,
+            style: AppTextStyles.body.copyWith(
+              height: 1.7,
+            ),
+          ),
           const SizedBox(height: 20),
           _CompletionButton(
             completed: lesson.isCompleted,
@@ -1293,10 +1665,13 @@ class _PdfLessonView extends StatelessWidget {
         markingComplete: markingComplete,
       );
     }
-    if (filePath == null) {
+
+    if (filePath == null || loading) {
       return Container(
         color: AppColors.surface,
-        child: const Center(child: AppLoader()),
+        child: const Center(
+          child: AppLoader(),
+        ),
       );
     }
 
@@ -1416,13 +1791,19 @@ class _DocumentError extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                color: AppColors.warning, size: 48),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.warning,
+              size: 48,
+            ),
             const SizedBox(height: 12),
-            Text(error,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body.copyWith(
-                    color: AppColors.textSecondary)),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
             TextButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh_rounded),
@@ -1459,12 +1840,17 @@ class _UnsupportedLessonView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.description_outlined,
-                color: AppColors.primary, size: 48),
+            const Icon(
+              Icons.description_outlined,
+              color: AppColors.primary,
+              size: 48,
+            ),
             const SizedBox(height: 12),
-            Text('This lesson uses content type: ${lesson.type}',
-                textAlign: TextAlign.center,
-                style: AppTextStyles.body),
+            Text(
+              'This lesson uses content type: ${lesson.type}',
+              textAlign: TextAlign.center,
+              style: AppTextStyles.body,
+            ),
             const SizedBox(height: 16),
             _CompletionButton(
               completed: lesson.isCompleted,
@@ -1495,17 +1881,22 @@ class _CompletionButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton.icon(
         onPressed: completed || loading ? null : onPressed,
-        icon: Icon(completed
-            ? Icons.check_circle_rounded
-            : Icons.check_rounded),
-        label: Text(completed
-            ? 'Lesson completed'
-            : loading
-                ? 'Saving…'
-                : 'Mark lesson as complete'),
+        icon: Icon(
+          completed
+              ? Icons.check_circle_rounded
+              : Icons.check_rounded,
+        ),
+        label: Text(
+          completed
+              ? 'Lesson completed'
+              : loading
+                  ? 'Saving…'
+                  : 'Mark lesson as complete',
+        ),
         style: ElevatedButton.styleFrom(
-          backgroundColor:
-              completed ? AppColors.success : AppColors.primary,
+          backgroundColor: completed
+              ? AppColors.success
+              : AppColors.primary,
           foregroundColor: AppColors.white,
         ),
       ),
@@ -1530,15 +1921,24 @@ class _CourseLoadErrorView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.error_outline_rounded,
-                color: AppColors.error, size: 64),
+            const Icon(
+              Icons.error_outline_rounded,
+              color: AppColors.error,
+              size: 64,
+            ),
             const SizedBox(height: 16),
-            Text('Failed to load lessons', style: AppTextStyles.h3),
+            Text(
+              'Failed to load lessons',
+              style: AppTextStyles.h3,
+            ),
             const SizedBox(height: 8),
-            Text(error,
-                textAlign: TextAlign.center,
-                style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary)),
+            Text(
+              error,
+              textAlign: TextAlign.center,
+              style: AppTextStyles.bodySmall.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
             const SizedBox(height: 20),
             ElevatedButton.icon(
               onPressed: onRetry,
@@ -1555,7 +1955,9 @@ class _CourseLoadErrorView extends StatelessWidget {
 class _EmptyView extends StatelessWidget {
   final VoidCallback onBack;
 
-  const _EmptyView({required this.onBack});
+  const _EmptyView({
+    required this.onBack,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1563,14 +1965,23 @@ class _EmptyView extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.video_library_outlined,
-              color: AppColors.textSecondary, size: 64),
+          const Icon(
+            Icons.video_library_outlined,
+            color: AppColors.textSecondary,
+            size: 64,
+          ),
           const SizedBox(height: 16),
-          Text('No lessons yet', style: AppTextStyles.h3),
+          Text(
+            'No lessons yet',
+            style: AppTextStyles.h3,
+          ),
           const SizedBox(height: 8),
-          Text('Lessons will appear here once added.',
-              style: AppTextStyles.bodySmall.copyWith(
-                  color: AppColors.textSecondary)),
+          Text(
+            'Lessons will appear here once added.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: 20),
           OutlinedButton.icon(
             onPressed: onBack,

@@ -6,6 +6,7 @@ class LessonModel {
   final String? description;
   final String? contentUrl;
   final String? streamingUrl;
+  final String? localFilePath;
   final String? textContent;
   final String type;
   final int? durationMinutes;
@@ -26,6 +27,7 @@ class LessonModel {
     this.description,
     this.contentUrl,
     this.streamingUrl,
+    this.localFilePath,
     this.textContent,
     this.type = 'VIDEO',
     this.durationMinutes,
@@ -60,6 +62,9 @@ class LessonModel {
       description: json['description']?.toString(),
       contentUrl: ApiConstants.resolveMediaUrl(rawContent),
       streamingUrl: ApiConstants.resolveMediaUrl(rawStreaming),
+      localFilePath: _nonEmpty(
+        json['localFilePath'] ?? json['local_file_path'],
+      ),
       textContent: json['textContent']?.toString(),
       type: (json['type']?.toString() ?? 'VIDEO').toUpperCase(),
       durationMinutes: durationValue != null
@@ -86,13 +91,25 @@ class LessonModel {
   }
 
   String? get mediaUrl =>
-      _hasValue(streamingUrl) ? streamingUrl : contentUrl;
+      _hasValue(localFilePath)
+          ? localFilePath
+          : _hasValue(streamingUrl)
+              ? streamingUrl
+              : contentUrl;
 
-  String? get documentUrl => contentUrl;
+  String? get documentUrl =>
+      _hasValue(localFilePath) ? localFilePath : contentUrl;
 
   String? get videoUrl => mediaUrl;
 
+  bool get hasLocalFile => _hasValue(localFilePath);
+
   LessonModel copyWith({
+    String? contentUrl,
+    String? streamingUrl,
+    String? localFilePath,
+    String? textContent,
+    int? durationMinutes,
     bool? isCompleted,
     int? watchedSeconds,
     int? progressPercent,
@@ -103,11 +120,12 @@ class LessonModel {
       id: id,
       title: title,
       description: description,
-      contentUrl: contentUrl,
-      streamingUrl: streamingUrl,
-      textContent: textContent,
+      contentUrl: contentUrl ?? this.contentUrl,
+      streamingUrl: streamingUrl ?? this.streamingUrl,
+      localFilePath: localFilePath ?? this.localFilePath,
+      textContent: textContent ?? this.textContent,
       type: type,
-      durationMinutes: durationMinutes,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
       durationSeconds: durationSeconds ?? this.durationSeconds,
       order: order,
       isPreview: isPreview,
@@ -127,8 +145,9 @@ class LessonModel {
     return text.isEmpty ? null : text;
   }
 
-  static bool _hasValue(String? value) =>
-      value != null && value.trim().isNotEmpty;
+  static bool _hasValue(String? value) {
+    return value != null && value.trim().isNotEmpty;
+  }
 
   static int? _toInt(dynamic value) {
     if (value == null) return null;
@@ -137,12 +156,15 @@ class LessonModel {
     return int.tryParse(value.toString());
   }
 
-  static int? _secondsToMinutes(int? seconds) =>
-      seconds == null ? null : (seconds / 60).ceil();
+  static int? _secondsToMinutes(int? seconds) {
+    return seconds == null ? null : (seconds / 60).ceil();
+  }
 
   static bool _toBool(dynamic value) {
     if (value is bool) return value;
+
     final normalized = value?.toString().trim().toLowerCase();
+
     return normalized == 'true' ||
         normalized == '1' ||
         normalized == 'yes';
@@ -150,25 +172,33 @@ class LessonModel {
 
   String get durationText {
     if (durationMinutes == null) return '';
+
     final hours = durationMinutes! ~/ 60;
     final minutes = durationMinutes! % 60;
+
     return hours > 0 ? '${hours}h ${minutes}m' : '${minutes}m';
   }
 
   bool get isYoutube {
-    final url = mediaUrl;
+    final url = streamingUrl;
+
     return _hasValue(url) &&
         (url!.contains('youtube.com') || url.contains('youtu.be'));
   }
 
   String? get youtubeId {
-    final url = mediaUrl;
+    final url = streamingUrl;
+
     if (!isYoutube || url == null) return null;
+
     final uri = Uri.tryParse(url);
+
     if (uri == null) return null;
+
     if (uri.queryParameters.containsKey('v')) {
       return uri.queryParameters['v'];
     }
+
     return uri.pathSegments.isNotEmpty
         ? uri.pathSegments.last
         : null;
