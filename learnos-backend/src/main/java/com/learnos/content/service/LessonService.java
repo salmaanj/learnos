@@ -27,6 +27,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -164,12 +166,26 @@ public class LessonService {
         User user = getUser(userEmail);
 
         Lesson lesson = lessonRepository.findById(lessonId)
-                .orElseThrow(() -> new RuntimeException("Lesson not found: " + lessonId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Lesson not found: " + lessonId
+                ));
 
-        assertLearnerCanAccessLesson(user, lesson);
+        try {
+            assertLearnerCanAccessLesson(user, lesson);
+        } catch (RuntimeException ex) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    ex.getMessage(),
+                    ex
+            );
+        }
 
         if (!lesson.isPublished() && user.getRole() == Role.LEARNER) {
-            throw new RuntimeException("This lesson is not published.");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "This lesson is not published."
+            );
         }
 
         return lesson;
