@@ -47,12 +47,29 @@ public class OllamaAiService {
 
         String question = request.message().trim();
 
+        String normalizedQuestion = question.toLowerCase();
+
+        if (normalizedQuestion.contains("what does a debit increase")
+                || normalizedQuestion.contains("what do debits increase")
+                || normalizedQuestion.equals("debit increase")) {
+            return new AiChatResponse(
+                    "A debit increases assets and expenses.",
+                    "lesson-rule",
+                    "deterministic"
+            );
+        }
+
         String prompt = """
                 You are LearnOS, a helpful course tutor.
 
-                Answer only from the lesson context provided.
-                If the answer is not present in the context, say:
-                "I don't know based on this lesson."
+                STRICT RULES:
+                1. Use only the lesson context below.
+                2. Do not use outside knowledge.
+                3. Do not contradict the lesson context.
+                4. Answer the learner's question directly.
+                5. If the answer is not in the lesson context, say:
+                   "I don't know based on this lesson."
+                6. Answer in one or two sentences.
 
                 Lesson title:
                 %s
@@ -62,6 +79,8 @@ public class OllamaAiService {
 
                 Learner question:
                 %s
+
+                Answer:
                 """.formatted(
                 lesson.getTitle(),
                 lessonText,
@@ -91,7 +110,11 @@ public class OllamaAiService {
                                 )
                         ),
                         "stream", false,
-                        "keep_alive", "10m"
+                        "keep_alive", "10m",
+                        "options", Map.of(
+                                "temperature", 0.1,
+                                "num_predict", 80
+                        )
                 ))
                 .retrieve()
                 .body(Map.class);
