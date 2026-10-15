@@ -8,6 +8,9 @@ class LiveClassModel {
   final int durationMinutes;
   final String status;
   final bool joined;
+  final bool eligible;
+  final bool joinAvailable;
+  final String? timezone;
 
   const LiveClassModel({
     required this.id,
@@ -19,11 +22,80 @@ class LiveClassModel {
     this.courseTitle,
     this.tutorName,
     this.joined = false,
+    this.eligible = false,
+    this.joinAvailable = false,
+    this.timezone,
   });
+
+  bool get canJoin {
+    final normalizedStatus = status.trim().toUpperCase();
+
+    return eligible &&
+        joinAvailable &&
+        normalizedStatus != 'DRAFT' &&
+        normalizedStatus != 'CANCELLED' &&
+        normalizedStatus != 'COMPLETED';
+  }
+
+  String get joinButtonLabel {
+    final normalizedStatus = status.trim().toUpperCase();
+
+    if (normalizedStatus == 'CANCELLED') {
+      return 'Class Cancelled';
+    }
+
+    if (normalizedStatus == 'COMPLETED') {
+      return 'Class Completed';
+    }
+
+    if (!eligible) {
+      return 'Not Available';
+    }
+
+    return canJoin ? 'Join Class' : 'Joining Not Open';
+  }
+
+  String get availabilityMessage {
+    final normalizedStatus = status.trim().toUpperCase();
+
+    if (normalizedStatus == 'CANCELLED') {
+      return 'This class has been cancelled.';
+    }
+
+    if (normalizedStatus == 'COMPLETED') {
+      return 'This class has been completed.';
+    }
+
+    if (!eligible) {
+      return 'You are not eligible to join this class.';
+    }
+
+    return 'Joining is available from 15 minutes before the class '
+        'until 30 minutes after it ends.';
+  }
 
   factory LiveClassModel.fromJson(Map<String, dynamic> json) {
     final course = json['course'];
     final tutor = json['tutor'];
+
+    final startValue = json['scheduledAt'] ??
+        json['startAt'] ??
+        json['startTime'] ??
+        json['scheduledDate'] ??
+        json['date'];
+
+    final endValue = json['endAt'] ?? json['endTime'];
+
+    final start = _tryParseDateTime(startValue);
+    final end = _tryParseDateTime(endValue);
+
+    final explicitDuration = json['durationMinutes'] ??
+        json['duration'] ??
+        json['durationInMinutes'];
+
+    final calculatedDuration = start != null && end != null
+        ? end.difference(start).inMinutes
+        : null;
 
     return LiveClassModel(
       id: '${json['id'] ?? json['_id'] ?? ''}',
@@ -31,23 +103,23 @@ class LiveClassModel {
       description: json['description']?.toString(),
       courseTitle: json['courseTitle']?.toString() ??
           (course is Map ? course['title']?.toString() : null),
-      tutorName: json['tutorName']?.toString() ??
+      tutorName: json['instructorName']?.toString() ??
+          json['tutorName']?.toString() ??
           _readPersonName(tutor),
-      scheduledAt: _parseDateTime(
-        json['scheduledAt'] ??
-            json['startAt'] ??
-            json['startTime'] ??
-            json['scheduledDate'] ??
-            json['date'],
-      ),
+      scheduledAt: start ?? DateTime.fromMillisecondsSinceEpoch(0),
       durationMinutes: _parseInt(
-        json['durationMinutes'] ??
-            json['duration'] ??
-            json['durationInMinutes'],
-        fallback: 60,
+        explicitDuration,
+        fallback: calculatedDuration != null && calculatedDuration > 0
+            ? calculatedDuration
+            : 60,
       ),
       status: '${json['status'] ?? 'SCHEDULED'}',
-      joined: json['joined'] == true || json['isJoined'] == true,
+      joined: _parseBool(json['joined']) ||
+          _parseBool(json['isJoined']) ||
+          json['joinAt'] != null,
+      eligible: _parseBool(json['eligible']),
+      joinAvailable: _parseBool(json['joinAvailable']),
+      timezone: json['timezone']?.toString(),
     );
   }
 
@@ -68,21 +140,21 @@ class LiveClassModel {
     return fullName.isEmpty ? null : fullName;
   }
 
-  static DateTime _parseDateTime(dynamic value) {
+  static DateTime? _tryParseDateTime(dynamic value) {
     if (value is DateTime) {
-      return value.toLocal();
+      return value;
     }
 
     final text = value?.toString().trim() ?? '';
-    final parsed = DateTime.tryParse(text);
 
-    if (parsed != null) {
-      return parsed.toLocal();
+    if (text.isEmpty) {
+      return null;
     }
 
-    // The API must provide the scheduled date/time. This fallback only
-    // prevents a malformed response from crashing the mobile screen.
-    return DateTime.fromMillisecondsSinceEpoch(0).toLocal();
+    // Backend startAt/endAt are class-local wall-clock values.
+    // Keep those components for display and show the timezone separately.
+    // Join permission always comes from the backend.
+    return DateTime.tryParse(text);
   }
 
   static int _parseInt(dynamic value, {required int fallback}) {
@@ -90,6 +162,20 @@ class LiveClassModel {
       return value;
     }
 
+    if (value is num) {
+      return value.toInt();
+    }
+
     return int.tryParse(value?.toString() ?? '') ?? fallback;
+  }
+
+  static bool _parseBool(dynamic value) {
+    if (value is bool) {
+      return value;
+    }
+
+    final text = value?.toString().trim().toLowerCase();
+
+    return text == 'true' || text == '1';
   }
 }

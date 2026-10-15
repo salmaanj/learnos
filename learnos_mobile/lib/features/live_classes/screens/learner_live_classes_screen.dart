@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -15,24 +17,72 @@ class LearnerLiveClassesScreen extends StatefulWidget {
 }
 
 class _LearnerLiveClassesScreenState
-    extends State<LearnerLiveClassesScreen> {
+    extends State<LearnerLiveClassesScreen>
+    with WidgetsBindingObserver {
   final LiveClassService _service = LiveClassService();
+  final Set<String> _joiningIds = {};
 
+  Timer? _refreshTimer;
   bool _loading = true;
+  bool _refreshing = false;
   String? _error;
   List<LiveClassModel> _classes = [];
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadClasses();
+    _startRefreshTimer();
   }
 
-  Future<void> _loadClasses() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _startRefreshTimer();
+      _loadClasses(silent: true);
+    } else {
+      _refreshTimer?.cancel();
+    }
+  }
+
+  void _startRefreshTimer() {
+    _refreshTimer?.cancel();
+
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 30),
+      (_) {
+        if (!mounted ||
+            _joiningIds.isNotEmpty ||
+            !(ModalRoute.of(context)?.isCurrent ?? true)) {
+          return;
+        }
+
+        _loadClasses(silent: true);
+      },
+    );
+  }
+
+  Future<void> _loadClasses({bool silent = false}) async {
+    if (!mounted || _refreshing) {
+      return;
+    }
+
+    _refreshing = true;
+
+    if (!silent) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
 
     try {
       final classes = await _service.getUpcomingClasses();
@@ -44,27 +94,87 @@ class _LearnerLiveClassesScreenState
       setState(() {
         _classes = classes;
         _loading = false;
+        _error = null;
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) {
         return;
       }
 
-      setState(() {
-        _loading = false;
-        _error = 'Unable to load upcoming live classes.';
-      });
+      if (!silent) {
+        setState(() {
+          _loading = false;
+          _error = _readableError(error);
+        });
+      }
+    } finally {
+      _refreshing = false;
     }
   }
 
+  String _readableError(Object error) {
+    if (error is LiveClassException) {
+      return error.message;
+    }
+
+    return 'Something went wrong. Please try again.';
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          maxLines: 5,
+          overflow: TextOverflow.ellipsis,
+        ),
+        backgroundColor: AppColors.error,
+        duration: const Duration(seconds: 5),
+        action: SnackBarAction(
+          label: 'Dismiss',
+          textColor: AppColors.white,
+          onPressed: () => messenger.hideCurrentSnackBar(),
+        ),
+      ),
+    );
+  }
+
   Future<void> _joinClass(LiveClassModel liveClass) async {
+    if (_joiningIds.contains(liveClass.id)) {
+      return;
+    }
+
+    if (!liveClass.canJoin) {
+      _showMessage(liveClass.availabilityMessage);
+      return;
+    }
+
+    setState(() {
+      _joiningIds.add(liveClass.id);
+    });
+
     try {
       final meetingUrl = await _service.joinClass(liveClass.id);
+
+      if (!mounted) {
+        return;
+      }
+
       final uri = Uri.tryParse(meetingUrl);
 
       if (uri == null ||
+          uri.host.isEmpty ||
           !(uri.scheme == 'http' || uri.scheme == 'https')) {
-        throw Exception('Invalid meeting URL.');
+        throw const LiveClassException(
+          'The meeting link is invalid. Please contact your instructor.',
+        );
       }
 
       final launched = await launchUrl(
@@ -73,21 +183,21 @@ class _LearnerLiveClassesScreenState
       );
 
       if (!launched) {
-        throw Exception('Could not open meeting URL.');
+        throw const LiveClassException(
+          'Could not open the meeting link. Please check that a browser '
+          'or the meeting app is available.',
+        );
       }
     } catch (error) {
-      if (!mounted) {
-        return;
-      }
+      _showMessage(_readableError(error));
+    } finally {
+      if (mounted) {
+        setState(() {
+          _joiningIds.remove(liveClass.id);
+        });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            error.toString().replaceFirst('Exception: ', ''),
-          ),
-          backgroundColor: AppColors.error,
-        ),
-      );
+        _loadClasses(silent: true);
+      }
     }
   }
 
@@ -99,7 +209,7 @@ class _LearnerLiveClassesScreenState
       ),
       child: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadClasses,
+          onRefresh: () => _loadClasses(),
           color: AppColors.primary,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
@@ -117,7 +227,8 @@ class _LearnerLiveClassesScreenState
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
                   child: Text(
-                    'Join your upcoming instructor-led sessions.',
+                    'Join your upcoming instructor-led sessions. '
+                    'Joining opens 15 minutes before start.',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: AppColors.textSecondary,
                     ),
@@ -140,7 +251,7 @@ class _LearnerLiveClassesScreenState
                     icon: Icons.cloud_off_rounded,
                     message: _error!,
                     actionLabel: 'Try Again',
-                    onAction: _loadClasses,
+                    onAction: () => _loadClasses(),
                   ),
                 )
               else if (_classes.isEmpty)
@@ -163,6 +274,7 @@ class _LearnerLiveClassesScreenState
 
                       return _LiveClassCard(
                         liveClass: liveClass,
+                        joining: _joiningIds.contains(liveClass.id),
                         onJoin: () => _joinClass(liveClass),
                       );
                     },
@@ -178,16 +290,19 @@ class _LearnerLiveClassesScreenState
 
 class _LiveClassCard extends StatelessWidget {
   final LiveClassModel liveClass;
+  final bool joining;
   final VoidCallback onJoin;
 
   const _LiveClassCard({
     required this.liveClass,
+    required this.joining,
     required this.onJoin,
   });
 
   @override
   Widget build(BuildContext context) {
     final start = liveClass.scheduledAt;
+    final timezone = liveClass.timezone?.trim() ?? '';
 
     return Container(
       padding: const EdgeInsets.all(18),
@@ -269,6 +384,11 @@ class _LiveClassCard extends StatelessWidget {
                 icon: Icons.timer_outlined,
                 label: '${liveClass.durationMinutes} min',
               ),
+              if (timezone.isNotEmpty)
+                _InfoChip(
+                  icon: Icons.public_rounded,
+                  label: timezone,
+                ),
             ],
           ),
           if ((liveClass.tutorName ?? '').isNotEmpty) ...[
@@ -284,12 +404,29 @@ class _LiveClassCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: onJoin,
-              icon: const Icon(Icons.login_rounded),
-              label: const Text('Join Class'),
+              onPressed: liveClass.canJoin && !joining ? onJoin : null,
+              icon: joining
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.textSecondary,
+                      ),
+                    )
+                  : Icon(
+                      liveClass.canJoin
+                          ? Icons.login_rounded
+                          : Icons.lock_clock_outlined,
+                    ),
+              label: Text(
+                joining ? 'Opening...' : liveClass.joinButtonLabel,
+              ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: AppColors.white,
+                disabledBackgroundColor: AppColors.cardBg,
+                disabledForegroundColor: AppColors.textSecondary,
                 padding: const EdgeInsets.symmetric(vertical: 13),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -297,6 +434,15 @@ class _LiveClassCard extends StatelessWidget {
               ),
             ),
           ),
+          if (!liveClass.canJoin) ...[
+            const SizedBox(height: 10),
+            Text(
+              liveClass.availabilityMessage,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
         ],
       ),
     );

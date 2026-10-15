@@ -20,7 +20,9 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -40,7 +42,7 @@ public class LearnerLiveClassService {
             String username
     ) {
         User learner = requireLearner(username);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         return liveClassRepository
                 .findAll()
@@ -55,23 +57,28 @@ public class LearnerLiveClassService {
                 .filter(
                         liveClass ->
                                 liveClass.getEndAt() != null
-                                        && liveClass
-                                        .getEndAt()
-                                        .isAfter(now)
+                                        && toInstant(
+                                        liveClass.getEndAt(),
+                                        liveClass.getTimezone()
+                                ).isAfter(now)
                 )
                 .sorted(
                         (first, second) ->
-                                first.getStartAt()
-                                        .compareTo(
-                                                second.getStartAt()
+                                toInstant(
+                                        first.getStartAt(),
+                                        first.getTimezone()
+                                ).compareTo(
+                                        toInstant(
+                                                second.getStartAt(),
+                                                second.getTimezone()
                                         )
+                                )
                 )
                 .map(
                         liveClass ->
                                 mapToResponse(
                                         liveClass,
-                                        learner,
-                                        now
+                                        learner
                                 )
                 )
                 .toList();
@@ -82,7 +89,7 @@ public class LearnerLiveClassService {
             String username
     ) {
         User learner = requireLearner(username);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         return liveClassRepository
                 .findAll()
@@ -97,23 +104,28 @@ public class LearnerLiveClassService {
                 .filter(
                         liveClass ->
                                 liveClass.getEndAt() != null
-                                        && !liveClass
-                                        .getEndAt()
-                                        .isAfter(now)
+                                        && !toInstant(
+                                        liveClass.getEndAt(),
+                                        liveClass.getTimezone()
+                                ).isAfter(now)
                 )
                 .sorted(
                         (first, second) ->
-                                second.getStartAt()
-                                        .compareTo(
-                                                first.getStartAt()
+                                toInstant(
+                                        second.getStartAt(),
+                                        second.getTimezone()
+                                ).compareTo(
+                                        toInstant(
+                                                first.getStartAt(),
+                                                first.getTimezone()
                                         )
+                                )
                 )
                 .map(
                         liveClass ->
                                 mapToResponse(
                                         liveClass,
-                                        learner,
-                                        now
+                                        learner
                                 )
                 )
                 .toList();
@@ -137,8 +149,7 @@ public class LearnerLiveClassService {
 
         return mapToResponse(
                 liveClass,
-                learner,
-                LocalDateTime.now()
+                learner
         );
     }
 
@@ -157,13 +168,13 @@ public class LearnerLiveClassService {
                 learner
         );
 
-        LocalDateTime now = LocalDateTime.now();
-
-        if (!isJoinWindowOpen(liveClass, now)) {
+        if (!isJoinWindowOpen(liveClass)) {
             throw new RuntimeException(
                     "Joining is available from 15 minutes before the class until 30 minutes after it ends"
             );
         }
+
+        LocalDateTime now = LocalDateTime.now();
 
         LiveClassAttendance attendance =
                 attendanceRepository
@@ -267,15 +278,13 @@ public class LearnerLiveClassService {
 
         return mapToResponse(
                 liveClass,
-                learner,
-                now
+                learner
         );
     }
 
     private LearnerLiveClassResponse mapToResponse(
             LiveClass liveClass,
-            User learner,
-            LocalDateTime now
+            User learner
     ) {
         LiveClassAttendance attendance =
                 attendanceRepository
@@ -315,7 +324,7 @@ public class LearnerLiveClassService {
                 liveClass.getRecordingUrl(),
 
                 true,
-                isJoinWindowOpen(liveClass, now),
+                isJoinWindowOpen(liveClass),
 
                 attendance != null
                         ? attendance.getAttendanceStatus()
@@ -402,8 +411,7 @@ public class LearnerLiveClassService {
     }
 
     private boolean isJoinWindowOpen(
-            LiveClass liveClass,
-            LocalDateTime now
+            LiveClass liveClass
     ) {
         if (
                 liveClass.getStartAt() == null
@@ -422,14 +430,37 @@ public class LearnerLiveClassService {
             return false;
         }
 
-        LocalDateTime joinStart =
-                liveClass.getStartAt().minusMinutes(15);
+        Instant classStart = toInstant(
+                liveClass.getStartAt(),
+                liveClass.getTimezone()
+        );
 
-        LocalDateTime joinEnd =
-                liveClass.getEndAt().plusMinutes(30);
+        Instant classEnd = toInstant(
+                liveClass.getEndAt(),
+                liveClass.getTimezone()
+        );
+
+        Instant now = Instant.now();
+
+        Instant joinStart =
+                classStart.minusSeconds(15 * 60);
+
+        Instant joinEnd =
+                classEnd.plusSeconds(30 * 60);
 
         return !now.isBefore(joinStart)
                 && !now.isAfter(joinEnd);
+    }
+
+    private Instant toInstant(
+            LocalDateTime localDateTime,
+            String timezone
+    ) {
+        ZoneId zoneId = timezone == null || timezone.isBlank()
+                ? ZoneId.systemDefault()
+                : ZoneId.of(timezone);
+
+        return localDateTime.atZone(zoneId).toInstant();
     }
 
     private LiveClass getLiveClassOrThrow(

@@ -21,7 +21,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,7 +48,7 @@ public class TutorLiveClassController {
             @AuthenticationPrincipal UserDetails userDetails
     ) {
         User tutor = getCurrentTutor(userDetails);
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         List<LiveClassResponse> classes =
                 liveClassRepository.findAll()
@@ -59,8 +61,10 @@ public class TutorLiveClassController {
                         )
                         .filter(liveClass ->
                                 liveClass.getEndAt() != null
-                                        && liveClass.getEndAt()
-                                        .isAfter(now)
+                                        && toInstant(
+                                        liveClass.getEndAt(),
+                                        liveClass.getTimezone()
+                                ).isAfter(now)
                         )
                         .filter(liveClass ->
                                 liveClass.getStatus() != null
@@ -70,8 +74,15 @@ public class TutorLiveClassController {
                                         != LiveClassStatus.CANCELLED
                         )
                         .sorted((first, second) ->
-                                first.getStartAt()
-                                        .compareTo(second.getStartAt())
+                                toInstant(
+                                        first.getStartAt(),
+                                        first.getTimezone()
+                                ).compareTo(
+                                        toInstant(
+                                                second.getStartAt(),
+                                                second.getTimezone()
+                                        )
+                                )
                         )
                         .map(this::toResponse)
                         .toList();
@@ -119,20 +130,25 @@ public class TutorLiveClassController {
             );
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
-        if (
-                now.isBefore(
-                        liveClass.getStartAt().minusMinutes(15)
-                )
-                        || now.isAfter(
-                        liveClass.getEndAt().plusMinutes(30)
-                )
-        ) {
+        Instant joinStart = toInstant(
+                liveClass.getStartAt(),
+                liveClass.getTimezone()
+        ).minusSeconds(15 * 60);
+
+        Instant joinEnd = toInstant(
+                liveClass.getEndAt(),
+                liveClass.getTimezone()
+        ).plusSeconds(30 * 60);
+
+        if (now.isBefore(joinStart) || now.isAfter(joinEnd)) {
             throw new RuntimeException(
                     "Joining is available from 15 minutes before the class until 30 minutes after it ends"
             );
         }
+
+        LocalDateTime responseTime = LocalDateTime.now();
 
         LiveClassJoinResponse response =
                 new LiveClassJoinResponse(
@@ -141,7 +157,7 @@ public class TutorLiveClassController {
                         liveClass.getProvider(),
                         liveClass.getMeetingUrl(),
                         liveClass.getMeetingPassword(),
-                        now
+                        responseTime
                 );
 
         return ResponseEntity.ok(
@@ -150,6 +166,17 @@ public class TutorLiveClassController {
                         "Tutor joined the live class"
                 )
         );
+    }
+
+    private Instant toInstant(
+            LocalDateTime localDateTime,
+            String timezone
+    ) {
+        ZoneId zoneId = timezone == null || timezone.isBlank()
+                ? ZoneId.systemDefault()
+                : ZoneId.of(timezone);
+
+        return localDateTime.atZone(zoneId).toInstant();
     }
 
     private User getCurrentTutor(
