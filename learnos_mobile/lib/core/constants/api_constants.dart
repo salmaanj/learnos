@@ -1,8 +1,28 @@
-class ApiConstants {
-  static const String baseUrl = 'http://10.0.2.2:8080/api/v1';
+import 'dart:io' show Platform;
 
-  static const String fileBaseUrl =
-      'http://10.0.2.2:8080/api/v1';
+class ApiConstants {
+  static const String _configuredBaseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: '',
+  );
+
+  static String get baseUrl {
+    if (_configuredBaseUrl.trim().isNotEmpty) {
+      return _configuredBaseUrl;
+    }
+
+    if (Platform.isAndroid) {
+      return 'http://10.0.2.2:8080/api/v1';
+    }
+
+    if (Platform.isIOS) {
+      return 'http://127.0.0.1:8080/api/v1';
+    }
+
+    return 'http://127.0.0.1:8080/api/v1';
+  }
+
+  static String get fileBaseUrl => baseUrl;
 
   // Auth
   static const String login = '/auth/login';
@@ -29,7 +49,7 @@ class ApiConstants {
   // Certificates
   static const String certificates = '/certificates';
   static const String myCertificates = '/certificates/my';
-  
+
   // Live Classes
   static const String upcomingLiveClasses =
       '/live-classes/learner/upcoming';
@@ -37,6 +57,7 @@ class ApiConstants {
   static String joinLiveClass(String id) {
     return '/live-classes/learner/$id/join';
   }
+
   // Profile
   static const String changePassword = '/auth/change-password';
   static const String updateProfile = '/auth/update-profile';
@@ -55,6 +76,14 @@ class ApiConstants {
     }
 
     final value = rawUrl.trim();
+
+    if (value.startsWith('http://') ||
+        value.startsWith('https://') ||
+        value.startsWith('blob:') ||
+        value.startsWith('data:')) {
+      return value;
+    }
+
     final filePathIndex = value.indexOf('/files/');
 
     if (filePathIndex == -1) {

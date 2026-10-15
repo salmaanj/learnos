@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../core/constants/api_constants.dart';
 import '../../../core/network/api_client.dart';
@@ -12,11 +13,18 @@ class AuthService {
     String email,
     String password,
   ) async {
+    final normalizedEmail = email.trim().toLowerCase();
+
     try {
+      debugPrint(
+        'LOGIN URL: ${ApiConstants.baseUrl}${ApiConstants.login}',
+      );
+      debugPrint('LOGIN EMAIL: $normalizedEmail');
+
       final response = await _dio.post(
         ApiConstants.login,
         data: {
-          'email': email.trim().toLowerCase(),
+          'email': normalizedEmail,
           'password': password,
         },
         options: Options(
@@ -26,13 +34,27 @@ class AuthService {
         ),
       );
 
+      debugPrint('LOGIN STATUS: ${response.statusCode}');
+      debugPrint(
+        'LOGIN RESPONSE TYPE: ${response.data.runtimeType}',
+      );
+
+      if (response.data is Map) {
+        debugPrint(
+          'LOGIN RESPONSE KEYS: '
+          '${(response.data as Map).keys.toList()}',
+        );
+      }
+
       final body = response.data;
       final data = body is Map && body['data'] != null
           ? body['data']
           : body;
 
       if (data is! Map) {
-        throw Exception('The server returned an invalid sign-in response.');
+        throw Exception(
+          'The server returned an invalid sign-in response.',
+        );
       }
 
       final authResponse = AuthResponse.fromJson(
@@ -40,7 +62,9 @@ class AuthService {
       );
 
       if (authResponse.accessToken.trim().isEmpty) {
-        throw Exception('The server did not return a valid access token.');
+        throw Exception(
+          'The server did not return a valid access token.',
+        );
       }
 
       await SecureStorage.saveToken(authResponse.accessToken);
@@ -51,8 +75,25 @@ class AuthService {
         authResponse.user.toJsonString(),
       );
 
+      debugPrint('LOGIN SUCCESS: token and user saved.');
+
       return authResponse;
-    } on DioException {
+    } on DioException catch (error) {
+      debugPrint('LOGIN DIO ERROR TYPE: ${error.type}');
+      debugPrint(
+        'LOGIN DIO STATUS: ${error.response?.statusCode}',
+      );
+      debugPrint(
+        'LOGIN DIO URL: ${error.requestOptions.uri}',
+      );
+      debugPrint(
+        'LOGIN DIO RESPONSE: ${error.response?.data}',
+      );
+
+      rethrow;
+    } catch (error, stackTrace) {
+      debugPrint('LOGIN NON-DIO ERROR: $error');
+      debugPrint('$stackTrace');
       rethrow;
     }
   }
@@ -249,6 +290,7 @@ class AuthService {
 
   Future<bool> isLoggedIn() async {
     final token = await SecureStorage.getToken();
+
     return token != null && token.trim().isNotEmpty;
   }
 
@@ -274,7 +316,8 @@ class AuthService {
     }
 
     if (statusCode == 409) {
-      return 'An account with this email already exists. Please sign in instead.';
+      return 'An account with this email already exists. '
+          'Please sign in instead.';
     }
 
     return error.message ?? 'Unable to create the learner account.';

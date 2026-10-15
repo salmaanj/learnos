@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../constants/api_constants.dart';
@@ -46,9 +47,48 @@ class ApiClient {
             }
           }
 
+          debugPrint(
+            'API REQUEST: ${options.method} ${options.uri}',
+          );
+
+          if (options.data is Map) {
+            final safeData =
+                Map<String, dynamic>.from(options.data as Map);
+
+            safeData.remove('password');
+            safeData.remove('newPassword');
+            safeData.remove('currentPassword');
+
+            debugPrint('API REQUEST DATA: $safeData');
+          }
+
           return handler.next(options);
         },
+        onResponse: (response, handler) {
+          debugPrint(
+            'API RESPONSE: ${response.statusCode} '
+            '${response.requestOptions.uri}',
+          );
+
+          if (response.data is Map) {
+            debugPrint(
+              'API RESPONSE KEYS: '
+              '${(response.data as Map).keys.toList()}',
+            );
+          }
+
+          return handler.next(response);
+        },
         onError: (error, handler) async {
+          debugPrint(
+            'API ERROR: ${error.type} '
+            '${error.response?.statusCode} '
+            '${error.requestOptions.uri}',
+          );
+          debugPrint(
+            'API ERROR RESPONSE: ${error.response?.data}',
+          );
+
           final requestOptions = error.requestOptions;
           final skipAuthRefresh =
               requestOptions.extra['skipAuthRefresh'] == true;
