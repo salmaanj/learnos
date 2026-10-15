@@ -47,40 +47,29 @@ public class OllamaAiService {
 
         String question = request.message().trim();
 
-        String normalizedQuestion = question.toLowerCase();
+        String systemMessage = """
+                You are a helpful tutor inside LearnOS.
 
-        if (normalizedQuestion.contains("what does a debit increase")
-                || normalizedQuestion.contains("what do debits increase")
-                || normalizedQuestion.equals("debit increase")) {
-            return new AiChatResponse(
-                    "A debit increases assets and expenses.",
-                    "lesson-rule",
-                    "deterministic"
-            );
-        }
-
-        String prompt = """
-                You are LearnOS, a helpful course tutor.
-
-                STRICT RULES:
-                1. Use only the lesson context below.
+                Follow these rules:
+                1. Use only the supplied lesson title and lesson content.
                 2. Do not use outside knowledge.
-                3. Do not contradict the lesson context.
-                4. Answer the learner's question directly.
-                5. If the answer is not in the lesson context, say:
+                3. Do not contradict the lesson content.
+                4. Answer the learner's question directly and clearly.
+                5. If the lesson does not support an answer, say:
                    "I don't know based on this lesson."
-                6. Answer in one or two sentences.
+                6. Do not add facts that are not present in the lesson.
+                7. Keep the answer concise, using one to three sentences.
+                """;
 
+        String userMessage = """
                 Lesson title:
                 %s
 
-                Lesson context:
+                Lesson content:
                 %s
 
                 Learner question:
                 %s
-
-                Answer:
                 """.formatted(
                 lesson.getTitle(),
                 lessonText,
@@ -105,15 +94,19 @@ public class OllamaAiService {
                         "model", model,
                         "messages", List.of(
                                 Map.of(
+                                        "role", "system",
+                                        "content", systemMessage
+                                ),
+                                Map.of(
                                         "role", "user",
-                                        "content", prompt
+                                        "content", userMessage
                                 )
                         ),
                         "stream", false,
                         "keep_alive", "10m",
                         "options", Map.of(
                                 "temperature", 0.1,
-                                "num_predict", 80
+                                "num_predict", 120
                         )
                 ))
                 .retrieve()
