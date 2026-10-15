@@ -95,6 +95,7 @@ public class SecurityConfig {
                 new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
+		        "https://lms.blute.co.in",
                 "http://localhost:4200",
                 "http://localhost:4201"
         ));
