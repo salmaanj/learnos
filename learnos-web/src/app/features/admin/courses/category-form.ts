@@ -43,7 +43,7 @@ export class CategoryForm implements OnInit {
   isSuperAdmin = false;
   companies: any[] = [];
 
-  private readonly baseUrl = 'http://localhost:8080/api/v1';
+  private readonly baseUrl = '/api/v1';
 
   constructor(
     private fb: FormBuilder,

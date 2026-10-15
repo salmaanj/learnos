@@ -69,7 +69,7 @@ export interface LiveClassJoinResponse {
 })
 export class LearnerLiveClassesService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/live-classes/learner';
+    '/api/v1/live-classes/learner';
 
   constructor(private http: HttpClient) {}
 

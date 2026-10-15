@@ -90,7 +90,7 @@ export interface BatchRequest {
   providedIn: 'root'
 })
 export class BatchesService {
-  private readonly baseUrl = 'http://localhost:8080/api/v1';
+  private readonly baseUrl = '/api/v1';
 
   constructor(private http: HttpClient) {}
 

@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8080';
+const API_BASE_URL = '';
 const API_CONTEXT_PATH = '/api/v1';
 
 export function resolveMediaUrl(

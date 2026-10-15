@@ -91,7 +91,7 @@ export interface LiveClassPayload {
 })
 export class LiveClassesService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/live-classes';
+    '/api/v1/live-classes';
 
   constructor(private http: HttpClient) {}
 

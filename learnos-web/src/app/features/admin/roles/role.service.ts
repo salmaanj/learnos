@@ -35,7 +35,7 @@ export interface RoleRequest {
 export class RoleService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/roles';
+    '/api/v1/roles';
 
   getRoles(): Observable<Role[]> {
     return this.http.get<Role[]>(

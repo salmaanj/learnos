@@ -38,7 +38,7 @@ export interface LearnerEnrollment {
 })
 export class LearnersService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/learners';
+    '/api/v1/learners';
 
   constructor(private http: HttpClient) {}
 

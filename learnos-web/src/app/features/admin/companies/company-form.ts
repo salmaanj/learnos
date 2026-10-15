@@ -743,7 +743,7 @@ export class CompanyForm
       return logoUrl;
     }
 
-    return `http://localhost:8080/api/v1${logoUrl}`;
+    return `/api/v1${logoUrl}`;
   }
 
   private revokeObjectUrl(): void {

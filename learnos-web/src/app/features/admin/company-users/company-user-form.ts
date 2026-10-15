@@ -166,7 +166,7 @@ export class CompanyUserForm implements OnInit {
   }
 
   loadCompanies(): void {
-    fetch('http://localhost:8080/api/v1/companies', {
+    fetch('/api/v1/companies', {
       headers: {
         Authorization:
           `Bearer ${localStorage.getItem('accessToken') || ''}`

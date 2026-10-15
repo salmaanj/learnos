@@ -70,7 +70,7 @@ export class AuthService {
     environment.apiUrl;
 
   private readonly apiBaseUrl =
-    'http://localhost:8080/api/v1';
+    '/api/v1';
 
   constructor(
     private readonly http: HttpClient

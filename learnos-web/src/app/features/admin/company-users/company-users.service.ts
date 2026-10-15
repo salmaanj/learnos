@@ -28,7 +28,7 @@ export interface CompanyUser {
 })
 export class CompanyUsersService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/company-users';
+    '/api/v1/company-users';
 
   constructor(
     private readonly http: HttpClient

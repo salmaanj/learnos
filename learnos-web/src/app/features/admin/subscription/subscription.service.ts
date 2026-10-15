@@ -62,7 +62,7 @@ export interface VerifyRazorpayPaymentRequest {
 })
 export class SubscriptionService {
   private readonly apiBaseUrl =
-    'http://localhost:8080/api/v1';
+    '/api/v1';
 
   private readonly baseUrl =
     `${this.apiBaseUrl}/company-subscriptions`;

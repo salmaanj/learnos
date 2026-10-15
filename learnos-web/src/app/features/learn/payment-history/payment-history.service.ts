@@ -10,7 +10,7 @@ import { PaymentHistoryRecord }
 @Injectable({ providedIn: 'root' })
 export class PaymentHistoryService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1';
+    '/api/v1';
 
   constructor(private http: HttpClient) {}
 

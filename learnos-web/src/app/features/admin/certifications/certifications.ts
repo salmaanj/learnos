@@ -61,7 +61,7 @@ export class Certifications implements OnInit {
   verificationResult: CertificateVerification | null = null;
   verificationError = '';
 
-  private readonly baseUrl = 'http://localhost:8080/api/v1';
+  private readonly baseUrl = '/api/v1';
 
   constructor(
     private http: HttpClient,

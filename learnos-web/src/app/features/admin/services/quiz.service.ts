@@ -50,7 +50,7 @@ export interface QuizResults {
 
 @Injectable({ providedIn: 'root' })
 export class QuizService {
-  private readonly baseUrl = 'http://localhost:8080/api/v1/quizzes';
+  private readonly baseUrl = '/api/v1/quizzes';
 
   constructor(private http: HttpClient) {}
 

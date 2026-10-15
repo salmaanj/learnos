@@ -22,7 +22,7 @@ export class CategoriesListComponent implements OnInit {
   sortColumn: SortColumn = 'name';
   sortDirection: SortDirection = 'asc';
 
-  private readonly baseUrl = 'http://localhost:8080/api/v1';
+  private readonly baseUrl = '/api/v1';
 
   constructor(
     private http: HttpClient,

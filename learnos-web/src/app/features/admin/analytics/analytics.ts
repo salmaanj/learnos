@@ -53,7 +53,7 @@ export class Analytics implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly cd = inject(ChangeDetectorRef);
 
-  private readonly baseUrl = 'http://localhost:8080/api/v1';
+  private readonly baseUrl = '/api/v1';
 
   loading = true;
   error = '';

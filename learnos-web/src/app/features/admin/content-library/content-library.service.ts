@@ -68,7 +68,7 @@ export interface ContentLibraryPayload {
 })
 export class ContentLibraryService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/content-library';
+    '/api/v1/content-library';
 
   constructor(private http: HttpClient) {}
 

@@ -41,7 +41,7 @@ export interface TutorJoinResponse {
 })
 export class TutorLiveClassesService {
   private readonly baseUrl =
-    'http://localhost:8080/api/v1/live-classes/tutor';
+    '/api/v1/live-classes/tutor';
 
   constructor(private http: HttpClient) {}
 

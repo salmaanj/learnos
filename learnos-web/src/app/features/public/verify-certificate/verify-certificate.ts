@@ -44,7 +44,7 @@ export class VerifyCertificate {
   result: CertificateVerifyResponse | null = null;
 
   private readonly apiBaseUrl =
-    'http://localhost:8080/api/v1';
+    '/api/v1';
 
   constructor(
     private http: HttpClient,

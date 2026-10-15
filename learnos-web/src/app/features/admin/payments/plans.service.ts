@@ -34,7 +34,7 @@ export type PlanPayload = {
   providedIn: 'root'
 })
 export class PlansService {
-  private readonly apiBaseUrl = 'http://localhost:8080/api/v1';
+  private readonly apiBaseUrl = '/api/v1';
   private readonly baseUrl = `${this.apiBaseUrl}/plans`;
 
   constructor(private http: HttpClient) {}
